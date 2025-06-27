@@ -1,0 +1,10 @@
+# Build artifacts
+test_sm
+*.o
+*.a
+*.so
+*.dylib
+
+# Temporary files
+/tmp/
+*.tmp
