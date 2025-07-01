@@ -26,6 +26,12 @@
 static uint8_t get_state_depth(const SM_State *state);
 static const SM_State *find_lca(const SM_State *s1, const SM_State *s2);
 static void perform_transition(SM_StateMachine *sm, const SM_State *targetState, const SM_Event *event);
+static const SM_Transition *find_matching_transition(const SM_State *state, const SM_Event *event, bool *guard_passed, SM_StateMachine *sm);
+static bool execute_transition(SM_StateMachine *sm, const SM_Transition *transition, const SM_Event *event);
+static bool process_state_transitions(SM_StateMachine *sm, const SM_State *state, const SM_Event *event);
+static void execute_exit_actions(SM_StateMachine *sm, const SM_State *sourceState, const SM_State *lca, const SM_Event *event);
+static bool build_entry_path(SM_StateMachine *sm, const SM_State *targetState, const SM_State *lca);
+static void execute_entry_actions(SM_StateMachine *sm, uint8_t path_length, const SM_Event *event);
 
 // --- Public API Implementation ---
 
@@ -94,9 +100,6 @@ bool SM_Dispatch(SM_StateMachine *sm, const SM_Event *event)
     bool is_handled = false;
     const SM_State *state_iter = NULL;
     bool continue_processing = true;
-    size_t transition_idx = 0U;
-    const SM_Transition *current_transition = NULL;
-    bool guard_passed = false;
     bool valid_parameters = false;
 
     /* Parameter validation */
@@ -111,60 +114,15 @@ bool SM_Dispatch(SM_StateMachine *sm, const SM_Event *event)
         /* Process event through state hierarchy */
         while ((state_iter != NULL) && continue_processing)
         {
-            /* Check if this state has transitions */
-            if ((state_iter->transitions != NULL) && (state_iter->numTransitions > 0U))
+            /* Try to process transitions for this state */
+            if (process_state_transitions(sm, state_iter, event))
             {
-                /* Search through state's transition table */
-                transition_idx = 0U;
-                while ((transition_idx < state_iter->numTransitions) && continue_processing)
-                {
-                    current_transition = &state_iter->transitions[transition_idx];
-
-                    /* Check if event ID matches */
-                    if (current_transition->eventId == event->id)
-                    {
-                        /* Evaluate guard condition */
-                        guard_passed = (current_transition->guard == NULL) || 
-                                       current_transition->guard(sm, event);
-                        
-                        if (guard_passed)
-                        {
-                            /* Handle transition based on type */
-                            if (current_transition->type == SM_TRANSITION_INTERNAL)
-                            {
-                                /* Internal transition: only execute action */
-                                if (current_transition->action != NULL)
-                                {
-                                    current_transition->action(sm, event);
-                                }
-                            }
-                            else
-                            {
-                                /* External transition: execute action and change state */
-                                if (current_transition->action != NULL)
-                                {
-                                    current_transition->action(sm, event);
-                                }
-                                perform_transition(sm, current_transition->target, event);
-                            }
-                            
-                            is_handled = true;
-                            continue_processing = false;
-                        }
-                        else
-                        {
-                            SM_LOG_DEBUG("Guard for event %u in state '%s' failed.", 
-                                       (unsigned)event->id, state_iter->name);
-                        }
-                    }
-                    
-                    transition_idx++;
-                }
+                is_handled = true;
+                continue_processing = false;
             }
-            
-            /* If not handled at this level, bubble up to parent */
-            if (continue_processing)
+            else
             {
+                /* If not handled at this level, bubble up to parent */
                 state_iter = state_iter->parent;
             }
         }
@@ -236,13 +194,10 @@ static void perform_transition(SM_StateMachine *sm, const SM_State *targetState,
 {
     const SM_State *sourceState = NULL;
     const SM_State *lca = NULL;
-    const SM_State *exit_iter = NULL;
-    const SM_State *entry_iter = NULL;
-    uint8_t path_idx = 0U;
-    int8_t entry_idx = 0;
+    uint8_t path_length = 0U;
     bool same_state = false;
     bool valid_parameters = false;
-    bool buffer_sufficient = true;
+    bool path_built = true;
 
     /* Parameter validation */
     if ((sm != NULL) && (targetState != NULL))
@@ -271,49 +226,28 @@ static void perform_transition(SM_StateMachine *sm, const SM_State *targetState,
             /* Different states: perform hierarchical transition */
             lca = find_lca(sourceState, targetState);
 
-            /* Perform Exit Actions */
-            exit_iter = sourceState;
-            while ((exit_iter != NULL) && (exit_iter != lca))
-            {
-                if (exit_iter->exitAction != NULL)
-                {
-                    exit_iter->exitAction(sm, event);
-                }
-                exit_iter = exit_iter->parent;
-            }
+            /* Execute exit actions */
+            execute_exit_actions(sm, sourceState, lca, event);
 
-            /* Record Entry Path */
-            path_idx = 0U;
-            entry_iter = targetState;
-            while ((entry_iter != NULL) && (entry_iter != lca) && buffer_sufficient)
+            /* Build entry path and check if buffer is sufficient */
+            path_built = build_entry_path(sm, targetState, lca);
+
+            if (path_built)
             {
-                if (path_idx < sm->bufferSize)
+                /* Calculate path length for entry actions */
+                const SM_State *entry_iter = targetState;
+                path_length = 0U;
+                while ((entry_iter != NULL) && (entry_iter != lca))
                 {
-                    sm->entryPathBuffer[path_idx] = entry_iter;
-                    path_idx++;
+                    path_length++;
                     entry_iter = entry_iter->parent;
                 }
-                else
-                {
-                    buffer_sufficient = false;
-                }
-            }
 
-            if (buffer_sufficient)
-            {
                 /* Update current state */
                 sm->currentState = targetState;
 
-                /* Perform Entry Actions (in reverse order) */
-                entry_idx = (int8_t)path_idx - 1;
-                while (entry_idx >= 0)
-                {
-                    if (sm->entryPathBuffer[entry_idx]->entryAction != NULL)
-                    {
-                        sm->entryPathBuffer[entry_idx]->entryAction(sm, event);
-                    }
-                    entry_idx--;
-                }
+                /* Execute entry actions */
+                execute_entry_actions(sm, path_length, event);
             }
         }
     }
@@ -378,4 +312,196 @@ static const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
     }
 
     return result;
+}
+
+/**
+ * @brief Finds a matching transition for the given event in the state's transition table.
+ * @param[in] state The state to search for transitions.
+ * @param[in] event The event to match.
+ * @param[out] guard_passed Set to true if a matching transition's guard passes, false otherwise.
+ * @param[in] sm The state machine instance (needed for guard evaluation).
+ * @return Pointer to the matching transition, or NULL if none found.
+ */
+static const SM_Transition *find_matching_transition(const SM_State *state, const SM_Event *event, bool *guard_passed, SM_StateMachine *sm)
+{
+    const SM_Transition *result = NULL;
+    size_t transition_idx = 0U;
+    const SM_Transition *current_transition = NULL;
+    bool found = false;
+
+    /* Initialize output parameter */
+    *guard_passed = false;
+
+    /* Check if this state has transitions */
+    if ((state != NULL) && (state->transitions != NULL) && (state->numTransitions > 0U) && (event != NULL))
+    {
+        /* Search through state's transition table */
+        while ((transition_idx < state->numTransitions) && (!found))
+        {
+            current_transition = &state->transitions[transition_idx];
+
+            /* Check if event ID matches */
+            if (current_transition->eventId == event->id)
+            {
+                result = current_transition;
+                found = true;
+                
+                /* Evaluate guard condition */
+                *guard_passed = (current_transition->guard == NULL) || 
+                               current_transition->guard(sm, event);
+            }
+            
+            transition_idx++;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief Executes a transition action and state change if needed.
+ * @param[in,out] sm The state machine instance.
+ * @param[in] transition The transition to execute.
+ * @param[in] event The event being processed.
+ * @return true if the transition was executed, false otherwise.
+ */
+static bool execute_transition(SM_StateMachine *sm, const SM_Transition *transition, const SM_Event *event)
+{
+    bool executed = false;
+    
+    if ((sm != NULL) && (transition != NULL))
+    {
+        /* Handle transition based on type */
+        if (transition->type == SM_TRANSITION_INTERNAL)
+        {
+            /* Internal transition: only execute action */
+            if (transition->action != NULL)
+            {
+                transition->action(sm, event);
+            }
+        }
+        else
+        {
+            /* External transition: execute action and change state */
+            if (transition->action != NULL)
+            {
+                transition->action(sm, event);
+            }
+            perform_transition(sm, transition->target, event);
+        }
+        
+        executed = true;
+    }
+    
+    return executed;
+}
+
+/**
+ * @brief Processes transitions for a single state.
+ * @param[in,out] sm The state machine instance.
+ * @param[in] state The state to process.
+ * @param[in] event The event being processed.
+ * @return true if the event was handled, false otherwise.
+ */
+static bool process_state_transitions(SM_StateMachine *sm, const SM_State *state, const SM_Event *event)
+{
+    bool handled = false;
+    const SM_Transition *matching_transition = NULL;
+    bool guard_passed = false;
+    
+    if ((sm != NULL) && (state != NULL) && (event != NULL))
+    {
+        /* Find matching transition */
+        matching_transition = find_matching_transition(state, event, &guard_passed, sm);
+        
+        if ((matching_transition != NULL) && guard_passed)
+        {
+            /* Execute the transition */
+            if (execute_transition(sm, matching_transition, event))
+            {
+                handled = true;
+            }
+        }
+        else if ((matching_transition != NULL) && (!guard_passed))
+        {
+            SM_LOG_DEBUG("Guard for event %u in state '%s' failed.", 
+                       (unsigned)event->id, state->name);
+        }
+    }
+    
+    return handled;
+}
+
+/**
+ * @brief Executes exit actions from source state up to (but not including) the LCA.
+ * @param[in,out] sm The state machine instance.
+ * @param[in] sourceState The source state to start from.
+ * @param[in] lca The lowest common ancestor state (exit actions stop before this state).
+ * @param[in] event The event being processed.
+ */
+static void execute_exit_actions(SM_StateMachine *sm, const SM_State *sourceState, const SM_State *lca, const SM_Event *event)
+{
+    const SM_State *exit_iter = sourceState;
+    
+    /* Perform Exit Actions */
+    while ((exit_iter != NULL) && (exit_iter != lca))
+    {
+        if (exit_iter->exitAction != NULL)
+        {
+            exit_iter->exitAction(sm, event);
+        }
+        exit_iter = exit_iter->parent;
+    }
+}
+
+/**
+ * @brief Builds the entry path from target state down to (but not including) the LCA.
+ * @param[in,out] sm The state machine instance.
+ * @param[in] targetState The target state to build path from.
+ * @param[in] lca The lowest common ancestor state (path building stops before this state).
+ * @return true if path was built successfully, false if buffer insufficient.
+ */
+static bool build_entry_path(SM_StateMachine *sm, const SM_State *targetState, const SM_State *lca)
+{
+    bool success = true;
+    uint8_t path_idx = 0U;
+    const SM_State *entry_iter = targetState;
+    
+    /* Record Entry Path */
+    while ((entry_iter != NULL) && (entry_iter != lca) && success)
+    {
+        if (path_idx < sm->bufferSize)
+        {
+            sm->entryPathBuffer[path_idx] = entry_iter;
+            path_idx++;
+            entry_iter = entry_iter->parent;
+        }
+        else
+        {
+            success = false;
+        }
+    }
+    
+    return success;
+}
+
+/**
+ * @brief Executes entry actions in reverse order from the entry path.
+ * @param[in,out] sm The state machine instance.
+ * @param[in] path_length The number of states in the entry path.
+ * @param[in] event The event being processed.
+ */
+static void execute_entry_actions(SM_StateMachine *sm, uint8_t path_length, const SM_Event *event)
+{
+    int8_t entry_idx = (int8_t)path_length - 1;
+    
+    /* Perform Entry Actions (in reverse order) */
+    while (entry_idx >= 0)
+    {
+        if (sm->entryPathBuffer[entry_idx]->entryAction != NULL)
+        {
+            sm->entryPathBuffer[entry_idx]->entryAction(sm, event);
+        }
+        entry_idx--;
+    }
 }
