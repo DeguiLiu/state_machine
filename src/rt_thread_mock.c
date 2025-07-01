@@ -250,3 +250,15 @@ rt_err_t rt_mq_recv(rt_mq_t mq, void* buffer, size_t size, int32_t timeout) {
     
     return RT_EOK;
 }
+
+/* Add function to get queue count for statistics */
+size_t rt_mq_get_count(rt_mq_t mq) {
+    rt_mq_mock_t* m = (rt_mq_mock_t*)mq;
+    if (!m) return 0;
+    
+    pthread_mutex_lock(&m->mutex);
+    size_t count = m->count;
+    pthread_mutex_unlock(&m->mutex);
+    
+    return count;
+}

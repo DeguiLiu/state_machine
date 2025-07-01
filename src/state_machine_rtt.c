@@ -695,6 +695,7 @@ static SM_RTT_Result dispatch_event_safe(SM_RTT_Instance *rtt_sm, const SM_Event
     bool validation_passed = false;
     bool event_handled = false;
     rt_err_t mutex_result = RT_ERROR;
+    const SM_State *prev_state = NULL;
     
     do {
         /* Parameter validation */
@@ -721,8 +722,16 @@ static SM_RTT_Result dispatch_event_safe(SM_RTT_Instance *rtt_sm, const SM_Event
         }
         
         if (mutex_result == RT_EOK) {
+            /* Store previous state to detect transitions */
+            prev_state = rtt_sm->base_sm.currentState;
+            
             /* Dispatch event to base state machine */
             event_handled = SM_Dispatch(&rtt_sm->base_sm, event);
+            
+            /* Check if state changed (transition occurred) */
+            if (prev_state != rtt_sm->base_sm.currentState) {
+                rtt_sm->stats.total_transitions++;
+            }
             
             /* Update statistics */
             rtt_sm->stats.total_events_processed++;
@@ -748,12 +757,26 @@ static SM_RTT_Result update_queue_stats(SM_RTT_Instance *rtt_sm)
 {
     SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
     
-    if (rtt_sm != NULL) {
-        /* Note: In a real RT-Thread implementation, we would query the actual queue depth
-           For now, we simulate the statistics update */
-        /* This is a simplified implementation - real RT-Thread would have queue depth queries */
-        
-        result = SM_RTT_RESULT_SUCCESS;
+    if (rtt_sm != NULL && rtt_sm->event_queue != NULL) {
+        /* Thread-safe access to queue statistics */
+        if (rtt_sm->mutex == NULL || rt_mutex_take(rtt_sm->mutex, 100) == RT_EOK) {
+            #ifdef RT_THREAD_MOCK
+            /* For RT-Thread mock, use the queue count function */
+            rtt_sm->stats.current_queue_depth = (uint32_t)rt_mq_get_count(rtt_sm->event_queue);
+            #else
+            /* For real RT-Thread, would use appropriate RT-Thread queue query API */
+            /* This would be implementation-specific based on RT-Thread version */
+            #endif
+            
+            if (rtt_sm->stats.current_queue_depth > rtt_sm->stats.max_queue_depth) {
+                rtt_sm->stats.max_queue_depth = rtt_sm->stats.current_queue_depth;
+            }
+            
+            if (rtt_sm->mutex != NULL) {
+                rt_mutex_release(rtt_sm->mutex);
+            }
+            result = SM_RTT_RESULT_SUCCESS;
+        }
     }
     
     return result;

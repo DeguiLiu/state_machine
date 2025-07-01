@@ -87,6 +87,7 @@ rt_err_t rt_mq_delete(rt_mq_t mq);
 rt_err_t rt_mq_send(rt_mq_t mq, void* buffer, size_t size);
 rt_err_t rt_mq_send_wait(rt_mq_t mq, void* buffer, size_t size, int32_t timeout);
 rt_err_t rt_mq_recv(rt_mq_t mq, void* buffer, size_t size, int32_t timeout);
+size_t rt_mq_get_count(rt_mq_t mq);
 
 #define rt_kprintf printf
 
