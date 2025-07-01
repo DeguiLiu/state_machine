@@ -36,21 +36,27 @@ void SM_Init(SM_StateMachine *sm,
              void *userData,
              SM_ActionFn unhandledHook)
 {
-    SM_ASSERT(sm != NULL);
-    SM_ASSERT(initialState != NULL);
-    SM_ASSERT(entryPathBuffer != NULL);
-    SM_ASSERT(bufferSize > 0U);
+    bool valid_parameters = false;
 
-    /* Assign user data and hooks first, as they might be used in the initial entry actions */
-    sm->userData = userData;
-    sm->unhandledEventHook = unhandledHook;
-    sm->initialState = initialState;
-    sm->entryPathBuffer = entryPathBuffer;
-    sm->bufferSize = bufferSize;
-    sm->currentState = NULL; /* Setting to NULL ensures the full entry path is executed on first transition */
+    /* Parameter validation */
+    if ((sm != NULL) && (initialState != NULL) && (entryPathBuffer != NULL) && (bufferSize > 0U))
+    {
+        valid_parameters = true;
+    }
 
-    /* Perform the initial transition */
-    perform_transition(sm, initialState, NULL);
+    if (valid_parameters)
+    {
+        /* Assign user data and hooks first, as they might be used in the initial entry actions */
+        sm->userData = userData;
+        sm->unhandledEventHook = unhandledHook;
+        sm->initialState = initialState;
+        sm->entryPathBuffer = entryPathBuffer;
+        sm->bufferSize = bufferSize;
+        sm->currentState = NULL; /* Setting to NULL ensures the full entry path is executed on first transition */
+
+        /* Perform the initial transition */
+        perform_transition(sm, initialState, NULL);
+    }
 }
 
 void SM_Deinit(SM_StateMachine *sm)
@@ -68,11 +74,19 @@ void SM_Deinit(SM_StateMachine *sm)
 
 void SM_Reset(SM_StateMachine *sm)
 {
-    SM_ASSERT(sm != NULL);
-    SM_ASSERT(sm->initialState != NULL);
+    bool valid_parameters = false;
 
-    // Transition from the current state to the initial state.
-    perform_transition(sm, sm->initialState, NULL);
+    /* Parameter validation */
+    if ((sm != NULL) && (sm->initialState != NULL))
+    {
+        valid_parameters = true;
+    }
+
+    if (valid_parameters)
+    {
+        /* Transition from the current state to the initial state */
+        perform_transition(sm, sm->initialState, NULL);
+    }
 }
 
 bool SM_Dispatch(SM_StateMachine *sm, const SM_Event *event)
@@ -83,78 +97,83 @@ bool SM_Dispatch(SM_StateMachine *sm, const SM_Event *event)
     size_t transition_idx = 0U;
     const SM_Transition *current_transition = NULL;
     bool guard_passed = false;
+    bool valid_parameters = false;
 
-    SM_ASSERT(sm != NULL);
-    SM_ASSERT(event != NULL);
-
-    /* Initialize local variables */
-    state_iter = sm->currentState;
-
-    /* Process event through state hierarchy */
-    while ((state_iter != NULL) && continue_processing)
+    /* Parameter validation */
+    if ((sm != NULL) && (event != NULL))
     {
-        /* Check if this state has transitions */
-        if ((state_iter->transitions != NULL) && (state_iter->numTransitions > 0U))
-        {
-            /* Search through state's transition table */
-            transition_idx = 0U;
-            while ((transition_idx < state_iter->numTransitions) && continue_processing)
-            {
-                current_transition = &state_iter->transitions[transition_idx];
+        valid_parameters = true;
+        state_iter = sm->currentState;
+    }
 
-                /* Check if event ID matches */
-                if (current_transition->eventId == event->id)
+    if (valid_parameters)
+    {
+        /* Process event through state hierarchy */
+        while ((state_iter != NULL) && continue_processing)
+        {
+            /* Check if this state has transitions */
+            if ((state_iter->transitions != NULL) && (state_iter->numTransitions > 0U))
+            {
+                /* Search through state's transition table */
+                transition_idx = 0U;
+                while ((transition_idx < state_iter->numTransitions) && continue_processing)
                 {
-                    /* Evaluate guard condition */
-                    guard_passed = (current_transition->guard == NULL) || 
-                                   current_transition->guard(sm, event);
-                    
-                    if (guard_passed)
+                    current_transition = &state_iter->transitions[transition_idx];
+
+                    /* Check if event ID matches */
+                    if (current_transition->eventId == event->id)
                     {
-                        /* Handle transition based on type */
-                        if (current_transition->type == SM_TRANSITION_INTERNAL)
+                        /* Evaluate guard condition */
+                        guard_passed = (current_transition->guard == NULL) || 
+                                       current_transition->guard(sm, event);
+                        
+                        if (guard_passed)
                         {
-                            /* Internal transition: only execute action */
-                            if (current_transition->action != NULL)
+                            /* Handle transition based on type */
+                            if (current_transition->type == SM_TRANSITION_INTERNAL)
                             {
-                                current_transition->action(sm, event);
+                                /* Internal transition: only execute action */
+                                if (current_transition->action != NULL)
+                                {
+                                    current_transition->action(sm, event);
+                                }
                             }
+                            else
+                            {
+                                /* External transition: execute action and change state */
+                                if (current_transition->action != NULL)
+                                {
+                                    current_transition->action(sm, event);
+                                }
+                                perform_transition(sm, current_transition->target, event);
+                            }
+                            
+                            is_handled = true;
+                            continue_processing = false;
                         }
                         else
                         {
-                            /* External transition: execute action and change state */
-                            if (current_transition->action != NULL)
-                            {
-                                current_transition->action(sm, event);
-                            }
-                            perform_transition(sm, current_transition->target, event);
+                            SM_LOG_DEBUG("Guard for event %u in state '%s' failed.", 
+                                       (unsigned)event->id, state_iter->name);
                         }
-                        
-                        is_handled = true;
-                        continue_processing = false;
                     }
-                    else
-                    {
-                        SM_LOG_DEBUG("Guard for event %u in state '%s' failed.", 
-                                   (unsigned)event->id, state_iter->name);
-                    }
+                    
+                    transition_idx++;
                 }
-                
-                transition_idx++;
+            }
+            
+            /* If not handled at this level, bubble up to parent */
+            if (continue_processing)
+            {
+                state_iter = state_iter->parent;
             }
         }
-        
-        /* If not handled at this level, bubble up to parent */
-        if (continue_processing)
-        {
-            state_iter = state_iter->parent;
-        }
-    }
 
-    /* Call unhandled event hook if event was not processed */
-    if ((!is_handled) && (sm->unhandledEventHook != NULL))
-    {
-        sm->unhandledEventHook(sm, event);
+        /* Call unhandled event hook if event was not processed */
+        if ((!is_handled) && (sm->unhandledEventHook != NULL))
+        {
+            sm->unhandledEventHook(sm, event);
+        }
     }
 
     return is_handled;
@@ -165,24 +184,29 @@ bool SM_IsInState(const SM_StateMachine *sm, const SM_State *state)
     bool is_in_state = false;
     const SM_State *current_iter = NULL;
     bool continue_search = true;
+    bool valid_parameters = false;
 
-    SM_ASSERT(sm != NULL);
-    SM_ASSERT(state != NULL);
-
-    /* Initialize variables */
-    current_iter = sm->currentState;
-
-    /* Search through state hierarchy */
-    while ((current_iter != NULL) && continue_search)
+    /* Parameter validation */
+    if ((sm != NULL) && (state != NULL))
     {
-        if (current_iter == state)
+        valid_parameters = true;
+        current_iter = sm->currentState;
+    }
+
+    if (valid_parameters)
+    {
+        /* Search through state hierarchy */
+        while ((current_iter != NULL) && continue_search)
         {
-            is_in_state = true;
-            continue_search = false;
-        }
-        else
-        {
-            current_iter = current_iter->parent;
+            if (current_iter == state)
+            {
+                is_in_state = true;
+                continue_search = false;
+            }
+            else
+            {
+                current_iter = current_iter->parent;
+            }
         }
     }
 
@@ -217,65 +241,80 @@ static void perform_transition(SM_StateMachine *sm, const SM_State *targetState,
     uint8_t path_idx = 0U;
     int8_t entry_idx = 0;
     bool same_state = false;
+    bool valid_parameters = false;
+    bool buffer_sufficient = true;
 
-    SM_ASSERT(sm != NULL);
-    SM_ASSERT(targetState != NULL);
-
-    /* Initialize local variables */
-    sourceState = sm->currentState;
-    same_state = (sourceState == targetState);
-
-    if (same_state)
+    /* Parameter validation */
+    if ((sm != NULL) && (targetState != NULL))
     {
-        /* External self-transition: execute exit then entry on the same state */
-        if ((sourceState != NULL) && (sourceState->exitAction != NULL))
-        {
-            sourceState->exitAction(sm, event);
-        }
-        if (targetState->entryAction != NULL)
-        {
-            targetState->entryAction(sm, event);
-        }
+        valid_parameters = true;
+        sourceState = sm->currentState;
+        same_state = (sourceState == targetState);
     }
-    else
+
+    if (valid_parameters)
     {
-        /* Different states: perform hierarchical transition */
-        lca = find_lca(sourceState, targetState);
-
-        /* Perform Exit Actions */
-        exit_iter = sourceState;
-        while ((exit_iter != NULL) && (exit_iter != lca))
+        if (same_state)
         {
-            if (exit_iter->exitAction != NULL)
+            /* External self-transition: execute exit then entry on the same state */
+            if ((sourceState != NULL) && (sourceState->exitAction != NULL))
             {
-                exit_iter->exitAction(sm, event);
+                sourceState->exitAction(sm, event);
             }
-            exit_iter = exit_iter->parent;
-        }
-
-        /* Record Entry Path */
-        path_idx = 0U;
-        entry_iter = targetState;
-        while ((entry_iter != NULL) && (entry_iter != lca))
-        {
-            SM_ASSERT(path_idx < sm->bufferSize);
-            sm->entryPathBuffer[path_idx] = entry_iter;
-            path_idx++;
-            entry_iter = entry_iter->parent;
-        }
-
-        /* Update current state */
-        sm->currentState = targetState;
-
-        /* Perform Entry Actions (in reverse order) */
-        entry_idx = (int8_t)path_idx - 1;
-        while (entry_idx >= 0)
-        {
-            if (sm->entryPathBuffer[entry_idx]->entryAction != NULL)
+            if (targetState->entryAction != NULL)
             {
-                sm->entryPathBuffer[entry_idx]->entryAction(sm, event);
+                targetState->entryAction(sm, event);
             }
-            entry_idx--;
+        }
+        else
+        {
+            /* Different states: perform hierarchical transition */
+            lca = find_lca(sourceState, targetState);
+
+            /* Perform Exit Actions */
+            exit_iter = sourceState;
+            while ((exit_iter != NULL) && (exit_iter != lca))
+            {
+                if (exit_iter->exitAction != NULL)
+                {
+                    exit_iter->exitAction(sm, event);
+                }
+                exit_iter = exit_iter->parent;
+            }
+
+            /* Record Entry Path */
+            path_idx = 0U;
+            entry_iter = targetState;
+            while ((entry_iter != NULL) && (entry_iter != lca) && buffer_sufficient)
+            {
+                if (path_idx < sm->bufferSize)
+                {
+                    sm->entryPathBuffer[path_idx] = entry_iter;
+                    path_idx++;
+                    entry_iter = entry_iter->parent;
+                }
+                else
+                {
+                    buffer_sufficient = false;
+                }
+            }
+
+            if (buffer_sufficient)
+            {
+                /* Update current state */
+                sm->currentState = targetState;
+
+                /* Perform Entry Actions (in reverse order) */
+                entry_idx = (int8_t)path_idx - 1;
+                while (entry_idx >= 0)
+                {
+                    if (sm->entryPathBuffer[entry_idx]->entryAction != NULL)
+                    {
+                        sm->entryPathBuffer[entry_idx]->entryAction(sm, event);
+                    }
+                    entry_idx--;
+                }
+            }
         }
     }
 }
