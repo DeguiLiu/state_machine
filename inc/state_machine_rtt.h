@@ -41,6 +41,19 @@
 /* --- RTT-specific Types --- */
 
 /**
+ * @brief RT-Thread state machine configuration.
+ */
+typedef struct {
+    uint32_t queue_size;         /**< Maximum number of events in queue. */
+    uint32_t thread_stack_size;  /**< Worker thread stack size in bytes. */
+    uint8_t  thread_priority;    /**< Worker thread priority. */
+    uint32_t thread_timeslice;   /**< Worker thread time slice. */
+    const char* thread_name;     /**< Worker thread name. */
+    const char* queue_name;      /**< Message queue name. */
+    const char* mutex_name;      /**< Mutex name. */
+} SM_RTT_Config;
+
+/**
  * @brief Result codes for RTT state machine operations.
  */
 typedef enum {
@@ -72,8 +85,10 @@ typedef struct {
 typedef struct {
     SM_StateMachine     base_sm;        /**< Base state machine instance. */
     SM_RTT_Statistics   stats;          /**< Usage statistics. */
+    SM_RTT_Config       config;         /**< Configuration settings. */
     bool                is_initialized; /**< Initialization status flag. */
     bool                is_started;     /**< Started status flag. */
+    bool                stop_requested; /**< Stop request flag for worker thread. */
     void               *worker_thread;  /**< RT-Thread worker thread handle. */
     void               *event_queue;    /**< RT-Thread message queue handle. */
     void               *mutex;          /**< RT-Thread mutex for thread safety. */
@@ -84,6 +99,7 @@ typedef struct {
 /**
  * @brief Initializes an RTT state machine instance.
  * @param[out] rtt_sm           Pointer to the RTT state machine instance.
+ * @param[in]  config           Pointer to the configuration settings.
  * @param[in]  initial_state    Pointer to the initial state.
  * @param[in]  entry_path_buffer User-provided buffer for transition calculations.
  * @param[in]  buffer_size      Size of the entry path buffer.
@@ -92,11 +108,19 @@ typedef struct {
  * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
  */
 SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
+                          const SM_RTT_Config *config,
                           const SM_State *initial_state,
                           const SM_State **entry_path_buffer,
                           uint8_t buffer_size,
                           void *user_data,
                           SM_ActionFn unhandled_hook);
+
+/**
+ * @brief Deinitializes an RTT state machine instance.
+ * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
+ * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ */
+SM_RTT_Result SM_RTT_Deinit(SM_RTT_Instance *rtt_sm);
 
 /**
  * @brief Starts the RTT state machine worker thread.
@@ -111,6 +135,14 @@ SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm);
  * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
  */
 SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm);
+
+/**
+ * @brief Dispatches an event synchronously (directly in calling thread).
+ * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
+ * @param[in]     event  Pointer to the event to dispatch.
+ * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ */
+SM_RTT_Result SM_RTT_DispatchSync(SM_RTT_Instance *rtt_sm, const SM_Event *event);
 
 /**
  * @brief Posts an event to the RTT state machine queue.
