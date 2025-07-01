@@ -1,5 +1,9 @@
 # Build artifacts
 test_sm
+test_basic_sm
+test_rtt_sm
+test_rtt_sm_v2
+stress_test_rtt
 *.o
 *.a
 *.so
