@@ -231,5 +231,5 @@ MIT License，详见源码头部。
    内置了事件处理总数、未处理事件数、状态切换次数、队列深度等统计，便于系统监控和调优。
 
 4. **更丰富的API**  
-   提供了如 `SM_RTT_Start`、`SM_RTT_Stop`、`SM_RTT_GetStatistics`、`SM_RTT_ResetStatistics` 等高级接口，方便管理和监控状态机运行。
+   提供了如 `SM_RT_Start`、`SM_RT_Stop`、`SM_RT_GetStatistics`、`SM_RT_ResetStatistics` 等高级接口，方便管理和监控状态机运行。
 

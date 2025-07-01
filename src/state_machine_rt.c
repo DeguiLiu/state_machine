@@ -1,80 +1,56 @@
-/* 
- * Copyright (c) 2013 Andreas Misje
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
-
 /**
  * @file state_machine_rtt.c
- * @brief MISRA-C:2012 compliant RT-Thread wrapper implementation.
+ * @brief RTOS wrapper implementation.
  *
- * This module implements thread-safe RT-Thread specific extensions to the 
- * state machine framework. All functions follow MISRA-C:2012 guidelines
- * with single return points and proper variable initialization.
+ * This module implements thread-safe extensions to the state machine framework. 
  */
 
-#include "state_machine_rtt.h"
+#include "state_machine_rt.h"
 
 /* --- Private Helper Function Declarations --- */
 static void worker_entry(void *parameter);
-static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *event);
+static SM_RT_Result dispatch_event(SM_RT_Instance *rt_sm, const SM_Event *event);
 static void perform_transition(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event);
 static uint8_t get_state_depth(const SM_State *state);
 static const SM_State *find_lca(const SM_State *s1, const SM_State *s2);
 
 /* --- Public API Implementation --- */
 
-SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
+SM_RT_Result SM_RT_Init(SM_RT_Instance *rt_sm,
                           const SM_State *initial_state,
                           const SM_State **entry_path_buffer,
                           uint8_t buffer_size,
                           void *user_data,
                           SM_ActionFn unhandled_hook)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     /* Initialize all local variables */
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (initial_state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (entry_path_buffer == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (buffer_size == 0U) {
-            result = SM_RTT_RESULT_ERROR_INVALID;
+            result = SM_RT_RESULT_ERROR_INVALID;
             break;
         }
         
-        if (rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_ALREADY_INIT;
+        if (rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_ALREADY_INIT;
             break;
         }
         
@@ -84,46 +60,46 @@ SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
     
     if (validation_passed) {
         /* Initialize the base state machine */
-        SM_Init(&rtt_sm->base_sm, initial_state, entry_path_buffer, 
+        SM_Init(&rt_sm->base_sm, initial_state, entry_path_buffer, 
                 buffer_size, user_data, unhandled_hook);
         
         /* Initialize RTT-specific fields */
-        rtt_sm->stats.total_events_processed = 0U;
-        rtt_sm->stats.total_events_unhandled = 0U;
-        rtt_sm->stats.total_transitions = 0U;
-        rtt_sm->stats.current_queue_depth = 0U;
-        rtt_sm->stats.max_queue_depth = 0U;
-        rtt_sm->is_initialized = true;
-        rtt_sm->is_started = false;
-        rtt_sm->worker_thread = NULL;
-        rtt_sm->event_queue = NULL;
-        rtt_sm->mutex = NULL;
+        rt_sm->stats.total_events_processed = 0U;
+        rt_sm->stats.total_events_unhandled = 0U;
+        rt_sm->stats.total_transitions = 0U;
+        rt_sm->stats.current_queue_depth = 0U;
+        rt_sm->stats.max_queue_depth = 0U;
+        rt_sm->is_initialized = true;
+        rt_sm->is_started = false;
+        rt_sm->worker_thread = NULL;
+        rt_sm->event_queue = NULL;
+        rt_sm->mutex = NULL;
         
-        result = SM_RTT_RESULT_SUCCESS;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm)
+SM_RT_Result SM_RT_Start(SM_RT_Instance *rt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
-        if (rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_ALREADY_STARTED;
+        if (rt_sm->is_started) {
+            result = SM_RT_RESULT_ERROR_ALREADY_STARTED;
             break;
         }
         
@@ -132,34 +108,34 @@ SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm)
     } while (false);
     
     if (validation_passed) {
-        /* Note: RT-Thread specific implementation would create thread and queue here */
+        /* Note: RTOS specific implementation would create thread and queue here */
         /* For now, we simulate the start operation */
-        rtt_sm->is_started = true;
-        result = SM_RTT_RESULT_SUCCESS;
+        rt_sm->is_started = true;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm)
+SM_RT_Result SM_RT_Stop(SM_RT_Instance *rt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
-        if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+        if (!rt_sm->is_started) {
+            result = SM_RT_RESULT_ERROR_NOT_STARTED;
             break;
         }
         
@@ -168,41 +144,41 @@ SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm)
     } while (false);
     
     if (validation_passed) {
-        /* Note: RT-Thread specific implementation would stop thread and cleanup here */
-        rtt_sm->is_started = false;
-        rtt_sm->worker_thread = NULL;
-        rtt_sm->event_queue = NULL;
-        rtt_sm->mutex = NULL;
-        result = SM_RTT_RESULT_SUCCESS;
+        /* Note: RTOS specific implementation would stop thread and cleanup here */
+        rt_sm->is_started = false;
+        rt_sm->worker_thread = NULL;
+        rt_sm->event_queue = NULL;
+        rt_sm->mutex = NULL;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_PostEvent(SM_RTT_Instance *rtt_sm, const SM_Event *event)
+SM_RT_Result SM_RT_PostEvent(SM_RT_Instance *rt_sm, const SM_Event *event)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (event == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
-        if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+        if (!rt_sm->is_started) {
+            result = SM_RT_RESULT_ERROR_NOT_STARTED;
             break;
         }
         
@@ -211,34 +187,34 @@ SM_RTT_Result SM_RTT_PostEvent(SM_RTT_Instance *rtt_sm, const SM_Event *event)
     } while (false);
     
     if (validation_passed) {
-        /* For now, directly dispatch the event (in real RT-Thread implementation, 
+        /* For now, directly dispatch the event (in real RTOS implementation, 
            this would post to a message queue) */
-        result = dispatch_event(rtt_sm, event);
+        result = dispatch_event(rt_sm, event);
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_PostEventId(SM_RTT_Instance *rtt_sm, uint32_t event_id, void *context)
+SM_RT_Result SM_RT_PostEventId(SM_RT_Instance *rt_sm, uint32_t event_id, void *context)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     SM_Event event_to_post = {0U, NULL};
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
-        if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+        if (!rt_sm->is_started) {
+            result = SM_RT_RESULT_ERROR_NOT_STARTED;
             break;
         }
         
@@ -252,26 +228,26 @@ SM_RTT_Result SM_RTT_PostEventId(SM_RTT_Instance *rtt_sm, uint32_t event_id, voi
         event_to_post.context = context;
         
         /* Post the event */
-        result = SM_RTT_PostEvent(rtt_sm, &event_to_post);
+        result = SM_RT_PostEvent(rt_sm, &event_to_post);
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Reset(SM_RTT_Instance *rtt_sm)
+SM_RT_Result SM_RT_Reset(SM_RT_Instance *rt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
@@ -281,40 +257,40 @@ SM_RTT_Result SM_RTT_Reset(SM_RTT_Instance *rtt_sm)
     
     if (validation_passed) {
         /* Reset the base state machine */
-        SM_Reset(&rtt_sm->base_sm);
-        rtt_sm->stats.total_transitions++;
-        result = SM_RTT_RESULT_SUCCESS;
+        SM_Reset(&rt_sm->base_sm);
+        rt_sm->stats.total_transitions++;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm, 
+SM_RT_Result SM_RT_IsInState(const SM_RT_Instance *rt_sm, 
                                const SM_State *state, 
                                bool *is_in_state)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (is_in_state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
@@ -324,8 +300,8 @@ SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm,
     
     if (validation_passed) {
         /* Use the base state machine function */
-        *is_in_state = SM_IsInState(&rtt_sm->base_sm, state);
-        result = SM_RTT_RESULT_SUCCESS;
+        *is_in_state = SM_IsInState(&rt_sm->base_sm, state);
+        result = SM_RT_RESULT_SUCCESS;
     } else {
         /* Ensure output parameter is set even on error */
         if (is_in_state != NULL) {
@@ -336,26 +312,26 @@ SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm, 
+SM_RT_Result SM_RT_GetCurrentStateName(const SM_RT_Instance *rt_sm, 
                                          const char **state_name)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (state_name == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
@@ -365,8 +341,8 @@ SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm,
     
     if (validation_passed) {
         /* Use the base state machine function */
-        *state_name = SM_GetCurrentStateName(&rtt_sm->base_sm);
-        result = SM_RTT_RESULT_SUCCESS;
+        *state_name = SM_GetCurrentStateName(&rt_sm->base_sm);
+        result = SM_RT_RESULT_SUCCESS;
     } else {
         /* Ensure output parameter is set even on error */
         if (state_name != NULL) {
@@ -377,26 +353,26 @@ SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm, 
-                                   SM_RTT_Statistics *stats)
+SM_RT_Result SM_RT_GetStatistics(const SM_RT_Instance *rt_sm, 
+                                   SM_RT_Statistics *stats)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (stats == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
@@ -406,12 +382,12 @@ SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm,
     
     if (validation_passed) {
         /* Copy statistics structure */
-        stats->total_events_processed = rtt_sm->stats.total_events_processed;
-        stats->total_events_unhandled = rtt_sm->stats.total_events_unhandled;
-        stats->total_transitions = rtt_sm->stats.total_transitions;
-        stats->current_queue_depth = rtt_sm->stats.current_queue_depth;
-        stats->max_queue_depth = rtt_sm->stats.max_queue_depth;
-        result = SM_RTT_RESULT_SUCCESS;
+        stats->total_events_processed = rt_sm->stats.total_events_processed;
+        stats->total_events_unhandled = rt_sm->stats.total_events_unhandled;
+        stats->total_transitions = rt_sm->stats.total_transitions;
+        stats->current_queue_depth = rt_sm->stats.current_queue_depth;
+        stats->max_queue_depth = rt_sm->stats.max_queue_depth;
+        result = SM_RT_RESULT_SUCCESS;
     } else {
         /* Ensure output parameter is initialized even on error */
         if (stats != NULL) {
@@ -426,20 +402,20 @@ SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
+SM_RT_Result SM_RT_ResetStatistics(SM_RT_Instance *rt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
-        if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+        if (!rt_sm->is_initialized) {
+            result = SM_RT_RESULT_ERROR_NOT_INIT;
             break;
         }
         
@@ -449,12 +425,12 @@ SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
     
     if (validation_passed) {
         /* Reset all statistics */
-        rtt_sm->stats.total_events_processed = 0U;
-        rtt_sm->stats.total_events_unhandled = 0U;
-        rtt_sm->stats.total_transitions = 0U;
-        rtt_sm->stats.current_queue_depth = 0U;
-        rtt_sm->stats.max_queue_depth = 0U;
-        result = SM_RTT_RESULT_SUCCESS;
+        rt_sm->stats.total_events_processed = 0U;
+        rt_sm->stats.total_events_unhandled = 0U;
+        rt_sm->stats.total_transitions = 0U;
+        rt_sm->stats.current_queue_depth = 0U;
+        rt_sm->stats.max_queue_depth = 0U;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
@@ -464,19 +440,19 @@ SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
 
 static void worker_entry(void *parameter)
 {
-    SM_RTT_Instance *rtt_sm = NULL;
+    SM_RT_Instance *rt_sm = NULL;
     bool valid_parameter = false;
     
     /* Initialize local variables */
-    rtt_sm = (SM_RTT_Instance *)parameter;
+    rt_sm = (SM_RT_Instance *)parameter;
     
     /* Parameter validation */
-    if (rtt_sm != NULL) {
+    if (rt_sm != NULL) {
         valid_parameter = true;
     }
     
     if (valid_parameter) {
-        /* Note: In a real RT-Thread implementation, this would be an infinite loop
+        /* Note: In a real RTOS implementation, this would be an infinite loop
            waiting for events from the message queue and processing them */
         /* For now, this is a placeholder implementation */
     }
@@ -485,21 +461,21 @@ static void worker_entry(void *parameter)
     return;
 }
 
-static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *event)
+static SM_RT_Result dispatch_event(SM_RT_Instance *rt_sm, const SM_Event *event)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
     bool event_handled = false;
     
     do {
         /* Parameter validation */
-        if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+        if (rt_sm == NULL) {
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
         if (event == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = SM_RT_RESULT_ERROR_NULL_PTR;
             break;
         }
         
@@ -509,15 +485,15 @@ static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *eve
     
     if (validation_passed) {
         /* Dispatch event to base state machine */
-        event_handled = SM_Dispatch(&rtt_sm->base_sm, event);
+        event_handled = SM_Dispatch(&rt_sm->base_sm, event);
         
         /* Update statistics */
-        rtt_sm->stats.total_events_processed++;
+        rt_sm->stats.total_events_processed++;
         if (!event_handled) {
-            rtt_sm->stats.total_events_unhandled++;
+            rt_sm->stats.total_events_unhandled++;
         }
         
-        result = SM_RTT_RESULT_SUCCESS;
+        result = SM_RT_RESULT_SUCCESS;
     }
     
     return result;
