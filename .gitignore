@@ -1,10 +1,17 @@
 # Build artifacts
 test_sm
+examples/test_rtt_compliance
+examples/test_misra_verification  
+examples/test_state_machine
 *.o
 *.a
 *.so
 *.dylib
+*.obj
+*.exe
 
 # Temporary files
 /tmp/
 *.tmp
+*~
+.DS_Store

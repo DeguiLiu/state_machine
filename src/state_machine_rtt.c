@@ -33,48 +33,48 @@
 
 /* --- Private Helper Function Declarations --- */
 static void worker_entry(void *parameter);
-static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *event);
+static Sm_Rtt_Result dispatch_event(Sm_Rtt_Instance *rtt_sm, const SM_Event *event);
 static void perform_transition(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event);
 static uint8_t get_state_depth(const SM_State *state);
 static const SM_State *find_lca(const SM_State *s1, const SM_State *s2);
 
 /* --- Public API Implementation --- */
 
-SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
+Sm_Rtt_Result sm_rtt_init(Sm_Rtt_Instance *rtt_sm,
                           const SM_State *initial_state,
                           const SM_State **entry_path_buffer,
                           uint8_t buffer_size,
                           void *user_data,
                           SM_ActionFn unhandled_hook)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     /* Initialize all local variables */
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (initial_state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (entry_path_buffer == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (buffer_size == 0U) {
-            result = SM_RTT_RESULT_ERROR_INVALID;
+            result = sm_rtt_result_error_invalid;
             break;
         }
         
         if (rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_ALREADY_INIT;
+            result = sm_rtt_result_error_already_init;
             break;
         }
         
@@ -99,31 +99,31 @@ SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
         rtt_sm->event_queue = NULL;
         rtt_sm->mutex = NULL;
         
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm)
+Sm_Rtt_Result sm_rtt_start(Sm_Rtt_Instance *rtt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
         if (rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_ALREADY_STARTED;
+            result = sm_rtt_result_error_already_started;
             break;
         }
         
@@ -135,31 +135,31 @@ SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm)
         /* Note: RT-Thread specific implementation would create thread and queue here */
         /* For now, we simulate the start operation */
         rtt_sm->is_started = true;
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm)
+Sm_Rtt_Result sm_rtt_stop(Sm_Rtt_Instance *rtt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
         if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+            result = sm_rtt_result_error_not_started;
             break;
         }
         
@@ -173,36 +173,36 @@ SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm)
         rtt_sm->worker_thread = NULL;
         rtt_sm->event_queue = NULL;
         rtt_sm->mutex = NULL;
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_PostEvent(SM_RTT_Instance *rtt_sm, const SM_Event *event)
+Sm_Rtt_Result sm_rtt_post_event(Sm_Rtt_Instance *rtt_sm, const SM_Event *event)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (event == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
         if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+            result = sm_rtt_result_error_not_started;
             break;
         }
         
@@ -219,26 +219,26 @@ SM_RTT_Result SM_RTT_PostEvent(SM_RTT_Instance *rtt_sm, const SM_Event *event)
     return result;
 }
 
-SM_RTT_Result SM_RTT_PostEventId(SM_RTT_Instance *rtt_sm, uint32_t event_id, void *context)
+Sm_Rtt_Result sm_rtt_post_event_id(Sm_Rtt_Instance *rtt_sm, uint32_t event_id, void *context)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     SM_Event event_to_post = {0U, NULL};
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
         if (!rtt_sm->is_started) {
-            result = SM_RTT_RESULT_ERROR_NOT_STARTED;
+            result = sm_rtt_result_error_not_started;
             break;
         }
         
@@ -252,26 +252,26 @@ SM_RTT_Result SM_RTT_PostEventId(SM_RTT_Instance *rtt_sm, uint32_t event_id, voi
         event_to_post.context = context;
         
         /* Post the event */
-        result = SM_RTT_PostEvent(rtt_sm, &event_to_post);
+        result = sm_rtt_post_event(rtt_sm, &event_to_post);
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_Reset(SM_RTT_Instance *rtt_sm)
+Sm_Rtt_Result sm_rtt_reset(Sm_Rtt_Instance *rtt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
@@ -283,38 +283,38 @@ SM_RTT_Result SM_RTT_Reset(SM_RTT_Instance *rtt_sm)
         /* Reset the base state machine */
         SM_Reset(&rtt_sm->base_sm);
         rtt_sm->stats.total_transitions++;
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
 }
 
-SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm, 
-                               const SM_State *state, 
-                               bool *is_in_state)
+Sm_Rtt_Result sm_rtt_is_in_state(const Sm_Rtt_Instance *rtt_sm, 
+                                 const SM_State *state, 
+                                 bool *is_in_state)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (is_in_state == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
@@ -325,7 +325,7 @@ SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm,
     if (validation_passed) {
         /* Use the base state machine function */
         *is_in_state = SM_IsInState(&rtt_sm->base_sm, state);
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     } else {
         /* Ensure output parameter is set even on error */
         if (is_in_state != NULL) {
@@ -336,26 +336,26 @@ SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm, 
-                                         const char **state_name)
+Sm_Rtt_Result sm_rtt_get_current_state_name(const Sm_Rtt_Instance *rtt_sm, 
+                                            const char **state_name)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (state_name == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
@@ -366,7 +366,7 @@ SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm,
     if (validation_passed) {
         /* Use the base state machine function */
         *state_name = SM_GetCurrentStateName(&rtt_sm->base_sm);
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     } else {
         /* Ensure output parameter is set even on error */
         if (state_name != NULL) {
@@ -377,26 +377,26 @@ SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm, 
-                                   SM_RTT_Statistics *stats)
+Sm_Rtt_Result sm_rtt_get_statistics(const Sm_Rtt_Instance *rtt_sm, 
+                                    Sm_Rtt_Statistics *stats)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (stats == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
@@ -411,7 +411,7 @@ SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm,
         stats->total_transitions = rtt_sm->stats.total_transitions;
         stats->current_queue_depth = rtt_sm->stats.current_queue_depth;
         stats->max_queue_depth = rtt_sm->stats.max_queue_depth;
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     } else {
         /* Ensure output parameter is initialized even on error */
         if (stats != NULL) {
@@ -426,20 +426,20 @@ SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm,
     return result;
 }
 
-SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
+Sm_Rtt_Result sm_rtt_reset_statistics(Sm_Rtt_Instance *rtt_sm)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (!rtt_sm->is_initialized) {
-            result = SM_RTT_RESULT_ERROR_NOT_INIT;
+            result = sm_rtt_result_error_not_init;
             break;
         }
         
@@ -454,7 +454,7 @@ SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
         rtt_sm->stats.total_transitions = 0U;
         rtt_sm->stats.current_queue_depth = 0U;
         rtt_sm->stats.max_queue_depth = 0U;
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
@@ -464,11 +464,11 @@ SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm)
 
 static void worker_entry(void *parameter)
 {
-    SM_RTT_Instance *rtt_sm = NULL;
+    Sm_Rtt_Instance *rtt_sm = NULL;
     bool valid_parameter = false;
     
     /* Initialize local variables */
-    rtt_sm = (SM_RTT_Instance *)parameter;
+    rtt_sm = (Sm_Rtt_Instance *)parameter;
     
     /* Parameter validation */
     if (rtt_sm != NULL) {
@@ -485,21 +485,21 @@ static void worker_entry(void *parameter)
     return;
 }
 
-static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *event)
+static Sm_Rtt_Result dispatch_event(Sm_Rtt_Instance *rtt_sm, const SM_Event *event)
 {
-    SM_RTT_Result result = SM_RTT_RESULT_ERROR_UNKNOWN;
+    Sm_Rtt_Result result = sm_rtt_result_error_unknown;
     bool validation_passed = false;
     bool event_handled = false;
     
     do {
         /* Parameter validation */
         if (rtt_sm == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
         if (event == NULL) {
-            result = SM_RTT_RESULT_ERROR_NULL_PTR;
+            result = sm_rtt_result_error_null_ptr;
             break;
         }
         
@@ -517,7 +517,7 @@ static SM_RTT_Result dispatch_event(SM_RTT_Instance *rtt_sm, const SM_Event *eve
             rtt_sm->stats.total_events_unhandled++;
         }
         
-        result = SM_RTT_RESULT_SUCCESS;
+        result = sm_rtt_result_success;
     }
     
     return result;
