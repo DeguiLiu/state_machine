@@ -60,6 +60,9 @@
 
 /* --- Core Types --- */
 
+#ifndef SM_CORE_TYPES_DEFINED
+#define SM_CORE_TYPES_DEFINED
+
 typedef struct SM_StateMachine SM_StateMachine;
 typedef struct SM_State        SM_State;
 typedef struct SM_Event        SM_Event;
@@ -127,6 +130,8 @@ struct SM_StateMachine {
     const SM_State **entryPathBuffer;     /**< User-provided buffer for transition calculations. */
     uint8_t         bufferSize;           /**< Size of the user-provided buffer. */
 };
+
+#endif /* SM_CORE_TYPES_DEFINED */
 
 
 /* --- Public API --- */

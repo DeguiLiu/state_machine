@@ -1,5 +1,10 @@
 # Build artifacts
 test_sm
+build/
+test_state_machine
+test_rt_compliance
+test_misra_verification
+posix_async_example
 *.o
 *.a
 *.so
