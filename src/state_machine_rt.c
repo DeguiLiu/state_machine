@@ -11,16 +11,16 @@
 #include "state_machine_rt.h"
 
 /* --- Private Helper Function Declarations --- */
-static void worker_entry(void *parameter);
-static SM_RT_Result dispatch_event(SM_RT_Instance *rt_sm, const SM_Event *event);
-static void perform_transition(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event);
-static uint8_t get_state_depth(const SM_State *state);
-static const SM_State *find_lca(const SM_State *s1, const SM_State *s2);
+static void worker_thread_entry(void *parameter);
+static SM_RT_Result dispatch_event_internal(SM_RT_Instance *rt_sm, const SM_Event *event);
+static void perform_transition_internal(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event);
+static uint8_t get_state_depth_internal(const SM_State *state);
+static const SM_State *find_lca_internal(const SM_State *s1, const SM_State *s2);
 
 /* --- Independent Base State Machine Functions --- */
-static void sm_rt_init_base(SM_StateMachine *sm, const SM_State *initialState, 
-                           const SM_State **entryPathBuffer, uint8_t bufferSize, 
-                           void *userData, SM_ActionFn unhandledHook);
+static void sm_rt_init_base(SM_StateMachine *sm, const SM_State *initial_state, 
+                           const SM_State **entry_path_buffer, uint8_t buffer_size, 
+                           void *user_data, SM_ActionFn unhandled_hook);
 static void sm_rt_reset_base(SM_StateMachine *sm);
 static bool sm_rt_dispatch_base(SM_StateMachine *sm, const SM_Event *event);
 static bool sm_rt_is_in_state_base(const SM_StateMachine *sm, const SM_State *state);
@@ -30,8 +30,8 @@ static const char *sm_rt_get_current_state_name_base(const SM_StateMachine *sm);
 static const SM_Transition *find_matching_transition(const SM_State *state, const SM_Event *event, bool *guard_passed, SM_StateMachine *sm);
 static bool execute_transition(SM_StateMachine *sm, const SM_Transition *transition, const SM_Event *event);
 static bool process_state_transitions(SM_StateMachine *sm, const SM_State *state, const SM_Event *event);
-static void execute_exit_actions(SM_StateMachine *sm, const SM_State *sourceState, const SM_State *lca, const SM_Event *event);
-static bool build_entry_path(SM_StateMachine *sm, const SM_State *targetState, const SM_State *lca);
+static void execute_exit_actions(SM_StateMachine *sm, const SM_State *source_state, const SM_State *lca, const SM_Event *event);
+static bool build_entry_path(SM_StateMachine *sm, const SM_State *target_state, const SM_State *lca);
 static void execute_entry_actions(SM_StateMachine *sm, uint8_t path_length, const SM_Event *event);
 
 /* --- Public API Implementation --- */
@@ -209,7 +209,7 @@ SM_RT_Result SM_RT_PostEvent(SM_RT_Instance *rt_sm, const SM_Event *event)
     if (validation_passed) {
         /* For now, directly dispatch the event (in real RTOS implementation, 
            this would post to a message queue) */
-        result = dispatch_event(rt_sm, event);
+        result = dispatch_event_internal(rt_sm, event);
     }
     
     return result;
@@ -458,7 +458,7 @@ SM_RT_Result SM_RT_ResetStatistics(SM_RT_Instance *rt_sm)
 
 /* --- Private Helper Function Implementations --- */
 
-static void worker_entry(void *parameter)
+static void worker_thread_entry(void *parameter)
 {
     SM_RT_Instance *rt_sm = NULL;
     bool valid_parameter = false;
@@ -481,7 +481,7 @@ static void worker_entry(void *parameter)
     return;
 }
 
-static SM_RT_Result dispatch_event(SM_RT_Instance *rt_sm, const SM_Event *event)
+static SM_RT_Result dispatch_event_internal(SM_RT_Instance *rt_sm, const SM_Event *event)
 {
     SM_RT_Result result = SM_RT_RESULT_ERROR_UNKNOWN;
     bool validation_passed = false;
@@ -519,7 +519,7 @@ static SM_RT_Result dispatch_event(SM_RT_Instance *rt_sm, const SM_Event *event)
     return result;
 }
 
-static void perform_transition(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event)
+static void perform_transition_internal(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event)
 {
     const SM_State *source_state = NULL;
     const SM_State *lca = NULL;
@@ -553,7 +553,7 @@ static void perform_transition(SM_StateMachine *sm, const SM_State *target_state
         else
         {
             /* Different states: perform hierarchical transition */
-            lca = find_lca(source_state, target_state);
+            lca = find_lca_internal(source_state, target_state);
 
             /* Execute exit actions */
             execute_exit_actions(sm, source_state, lca, event);
@@ -582,7 +582,7 @@ static void perform_transition(SM_StateMachine *sm, const SM_State *target_state
     }
 }
 
-static uint8_t get_state_depth(const SM_State *state)
+static uint8_t get_state_depth_internal(const SM_State *state)
 {
     uint8_t depth = 0U;
     const SM_State *current_state = state;
@@ -596,7 +596,7 @@ static uint8_t get_state_depth(const SM_State *state)
     return depth;
 }
 
-static const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
+static const SM_State *find_lca_internal(const SM_State *s1, const SM_State *s2)
 {
     const SM_State *result = NULL;
     const SM_State *p1 = NULL;
@@ -610,8 +610,8 @@ static const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
         valid_parameters = true;
         p1 = s1;
         p2 = s2;
-        depth1 = get_state_depth(p1);
-        depth2 = get_state_depth(p2);
+        depth1 = get_state_depth_internal(p1);
+        depth2 = get_state_depth_internal(p2);
     }
     
     if (valid_parameters) {
@@ -639,14 +639,14 @@ static const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
 
 /* --- Independent Base State Machine Functions Implementation --- */
 
-static void sm_rt_init_base(SM_StateMachine *sm, const SM_State *initialState, 
-                           const SM_State **entryPathBuffer, uint8_t bufferSize, 
-                           void *userData, SM_ActionFn unhandledHook)
+static void sm_rt_init_base(SM_StateMachine *sm, const SM_State *initial_state, 
+                           const SM_State **entry_path_buffer, uint8_t buffer_size, 
+                           void *user_data, SM_ActionFn unhandled_hook)
 {
     bool valid_parameters = false;
 
     /* Parameter validation */
-    if ((sm != NULL) && (initialState != NULL) && (entryPathBuffer != NULL) && (bufferSize > 0U))
+    if ((sm != NULL) && (initial_state != NULL) && (entry_path_buffer != NULL) && (buffer_size > 0U))
     {
         valid_parameters = true;
     }
@@ -654,15 +654,15 @@ static void sm_rt_init_base(SM_StateMachine *sm, const SM_State *initialState,
     if (valid_parameters)
     {
         /* Assign user data and hooks first, as they might be used in the initial entry actions */
-        sm->userData = userData;
-        sm->unhandledEventHook = unhandledHook;
-        sm->initialState = initialState;
-        sm->entryPathBuffer = entryPathBuffer;
-        sm->bufferSize = bufferSize;
+        sm->userData = user_data;
+        sm->unhandledEventHook = unhandled_hook;
+        sm->initialState = initial_state;
+        sm->entryPathBuffer = entry_path_buffer;
+        sm->bufferSize = buffer_size;
         sm->currentState = NULL; /* Setting to NULL ensures the full entry path is executed on first transition */
 
         /* Perform the initial transition */
-        perform_transition(sm, initialState, NULL);
+        perform_transition_internal(sm, initial_state, NULL);
     }
 }
 
@@ -679,7 +679,7 @@ static void sm_rt_reset_base(SM_StateMachine *sm)
     if (valid_parameters)
     {
         /* Transition from the current state to the initial state */
-        perform_transition(sm, sm->initialState, NULL);
+        perform_transition_internal(sm, sm->initialState, NULL);
     }
 }
 
@@ -847,7 +847,7 @@ static bool execute_transition(SM_StateMachine *sm, const SM_Transition *transit
             {
                 transition->action(sm, event);
             }
-            perform_transition(sm, transition->target, event);
+            perform_transition_internal(sm, transition->target, event);
         }
         
         executed = true;
@@ -899,9 +899,9 @@ static bool process_state_transitions(SM_StateMachine *sm, const SM_State *state
  * @param[in] lca The lowest common ancestor state (exit actions stop before this state).
  * @param[in] event The event being processed.
  */
-static void execute_exit_actions(SM_StateMachine *sm, const SM_State *sourceState, const SM_State *lca, const SM_Event *event)
+static void execute_exit_actions(SM_StateMachine *sm, const SM_State *source_state, const SM_State *lca, const SM_Event *event)
 {
-    const SM_State *exit_iter = sourceState;
+    const SM_State *exit_iter = source_state;
     
     /* Perform Exit Actions */
     while ((exit_iter != NULL) && (exit_iter != lca))
@@ -917,15 +917,15 @@ static void execute_exit_actions(SM_StateMachine *sm, const SM_State *sourceStat
 /**
  * @brief Builds the entry path from target state down to (but not including) the LCA.
  * @param[in,out] sm The state machine instance.
- * @param[in] targetState The target state to build path from.
+ * @param[in] target_state The target state to build path from.
  * @param[in] lca The lowest common ancestor state (path building stops before this state).
  * @return true if path was built successfully, false if buffer insufficient.
  */
-static bool build_entry_path(SM_StateMachine *sm, const SM_State *targetState, const SM_State *lca)
+static bool build_entry_path(SM_StateMachine *sm, const SM_State *target_state, const SM_State *lca)
 {
     bool success = true;
     uint8_t path_idx = 0U;
-    const SM_State *entry_iter = targetState;
+    const SM_State *entry_iter = target_state;
     
     /* Record Entry Path */
     while ((entry_iter != NULL) && (entry_iter != lca) && success)

@@ -9,7 +9,7 @@
  *  - 多个线程安全投递事件，状态机内部操作全加锁
  *  - 支持基本状态切换、内部统计与输出
  *
- * 编译: gcc -o posix_async_example examples/posix_async_example.c state_machine_rtt.c -lpthread -lrt
+ * 编译: gcc -o posix_async_example examples/posix_async_example.c src/state_machine_rt.c -lpthread -lrt
  */
 
  #define _GNU_SOURCE
