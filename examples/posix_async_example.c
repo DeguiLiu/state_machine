@@ -114,7 +114,7 @@
          n = mq_receive(event_queue, (char*)&event, sizeof(event), NULL);
          if (n == sizeof(event)) {
              pthread_mutex_lock(&sm_mutex);
-             SM_Dispatch(&sm->base_sm, &event);
+             SM_RT_PostEvent(sm, &event); // 修改为SM_RT_PostEvent
              pthread_mutex_unlock(&sm_mutex);
  
              // 统计异步事件
@@ -248,9 +248,9 @@
  
      /* 2. 初始化状态机 */
      memset(&user_data, 0, sizeof(user_data));
-     SM_Init(&sm_instance.base_sm, &idle_state, entry_path_buffer,
+     SM_RT_Init(&sm_instance, &idle_state, entry_path_buffer,
              sizeof(entry_path_buffer)/sizeof(entry_path_buffer[0]),
-             &user_data, NULL);
+             &user_data, NULL); // 传递SM_RT_Instance指针
  
      /* 3. 启动worker线程 */
      pthread_t worker;
@@ -270,7 +270,7 @@
      event.id = EVENT_SYNC;
      printf("[Main] Dispatch SYNC_EVENT (sync)\n");
      pthread_mutex_lock(&sm_mutex);
-     SM_Dispatch(&sm_instance.base_sm, &event);
+     SM_RT_PostEvent(&sm_instance, &event); // 修改为SM_RT_PostEvent
      pthread_mutex_unlock(&sm_mutex);
  
      /* 7. 启动RESUME生产者线程（延迟投递） */
@@ -282,7 +282,7 @@
      event.id = EVENT_SYNC;
      printf("[Main] Dispatch SYNC_EVENT (sync) 2nd time\n");
      pthread_mutex_lock(&sm_mutex);
-     SM_Dispatch(&sm_instance.base_sm, &event);
+     SM_RT_PostEvent(&sm_instance, &event); // 修改为SM_RT_PostEvent
      pthread_mutex_unlock(&sm_mutex);
  
      /* 9. 主线程等一段时间后投递STOP事件 */
