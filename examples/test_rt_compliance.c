@@ -12,11 +12,17 @@ enum {
 static const SM_State TEST_STATE_A;
 static const SM_State TEST_STATE_B;
 
-static void entry_A(SM_StateMachine *sm, const SM_Event *event) { 
+static void entry_A(SM_StateMachine *sm, const SM_Event *event) 
+{ 
+    (void)sm;    /* Suppress unused parameter warning */
+    (void)event; /* Suppress unused parameter warning */
     printf("Entry A\n"); 
 }
 
-static void entry_B(SM_StateMachine *sm, const SM_Event *event) { 
+static void entry_B(SM_StateMachine *sm, const SM_Event *event) 
+{ 
+    (void)sm;    /* Suppress unused parameter warning */
+    (void)event; /* Suppress unused parameter warning */
     printf("Entry B\n"); 
 }
 
@@ -49,48 +55,48 @@ static const SM_State TEST_STATE_B = {
 int main(void)
 {
     SM_RT_Instance rt_sm = {0};
-    const SM_State *path_buffer[8];
+    const SM_State *pathBuffer[8];
     SM_RT_Result result;
-    bool is_in_state;
-    const char *state_name;
+    bool isInState;
+    const char *stateName;
     SM_RT_Statistics stats;
     
     printf("=== MISRA-C:2012 Compliant RTT State Machine Test ===\n\n");
     
-    // Test initialization
+    /* Test initialization */
     printf("1. Testing SM_RT_Init...\n");
-    result = SM_RT_Init(&rt_sm, &TEST_STATE_A, path_buffer, 8, NULL, NULL);
+    result = SM_RT_Init(&rt_sm, &TEST_STATE_A, pathBuffer, 8, NULL, NULL);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
     
-    // Test getting current state name
+    /* Test getting current state name */
     printf("\n2. Testing SM_RT_GetCurrentStateName...\n");
-    result = SM_RT_GetCurrentStateName(&rt_sm, &state_name);
+    result = SM_RT_GetCurrentStateName(&rt_sm, &stateName);
     printf("   Result: %s, State: %s\n", 
            (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED", 
-           state_name);
+           stateName);
     
-    // Test state checking
+    /* Test state checking */
     printf("\n3. Testing SM_RT_IsInState...\n");
-    result = SM_RT_IsInState(&rt_sm, &TEST_STATE_A, &is_in_state);
+    result = SM_RT_IsInState(&rt_sm, &TEST_STATE_A, &isInState);
     printf("   Result: %s, Is in StateA: %s\n", 
            (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED",
-           is_in_state ? "YES" : "NO");
+           isInState ? "YES" : "NO");
     
-    // Test start
+    /* Test start */
     printf("\n4. Testing SM_RT_Start...\n");
     result = SM_RT_Start(&rt_sm);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
     
-    // Test event posting
+    /* Test event posting */
     printf("\n5. Testing SM_RT_PostEventId...\n");
     result = SM_RT_PostEventId(&rt_sm, EV_TEST_1, NULL);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
     
-    // Check state after transition
-    result = SM_RT_GetCurrentStateName(&rt_sm, &state_name);
-    printf("   Current state after event: %s\n", state_name);
+    /* Check state after transition */
+    result = SM_RT_GetCurrentStateName(&rt_sm, &stateName);
+    printf("   Current state after event: %s\n", stateName);
     
-    // Test statistics
+    /* Test statistics */
     printf("\n6. Testing SM_RT_GetStatistics...\n");
     result = SM_RT_GetStatistics(&rt_sm, &stats);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
@@ -98,15 +104,15 @@ int main(void)
     printf("   Events unhandled: %u\n", (unsigned)stats.total_events_unhandled);
     printf("   Total transitions: %u\n", (unsigned)stats.total_transitions);
     
-    // Test reset
+    /* Test reset */
     printf("\n7. Testing SM_RT_Reset...\n");
     result = SM_RT_Reset(&rt_sm);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
     
-    result = SM_RT_GetCurrentStateName(&rt_sm, &state_name);
-    printf("   State after reset: %s\n", state_name);
+    result = SM_RT_GetCurrentStateName(&rt_sm, &stateName);
+    printf("   State after reset: %s\n", stateName);
     
-    // Test statistics reset
+    /* Test statistics reset */
     printf("\n8. Testing SM_RT_ResetStatistics...\n");
     result = SM_RT_ResetStatistics(&rt_sm);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
@@ -114,23 +120,23 @@ int main(void)
     result = SM_RT_GetStatistics(&rt_sm, &stats);
     printf("   Events processed after reset: %u\n", (unsigned)stats.total_events_processed);
     
-    // Test stop
+    /* Test stop */
     printf("\n9. Testing SM_RT_Stop...\n");
     result = SM_RT_Stop(&rt_sm);
     printf("   Result: %s\n", (result == SM_RT_RESULT_SUCCESS) ? "SUCCESS" : "FAILED");
     
-    // Test error cases
+    /* Test error cases */
     printf("\n10. Testing error cases...\n");
     
-    // Test NULL pointer
-    result = SM_RT_Init(NULL, &TEST_STATE_A, path_buffer, 8, NULL, NULL);
+    /* Test NULL pointer */
+    result = SM_RT_Init(NULL, &TEST_STATE_A, pathBuffer, 8, NULL, NULL);
     printf("    NULL pointer test: %s\n", 
            (result == SM_RT_RESULT_ERROR_NULL_PTR) ? "PASSED" : "FAILED");
     
-    // Test double initialization
+    /* Test double initialization */
     SM_RT_Instance test_sm = {0};
-    SM_RT_Init(&test_sm, &TEST_STATE_A, path_buffer, 8, NULL, NULL);
-    result = SM_RT_Init(&test_sm, &TEST_STATE_A, path_buffer, 8, NULL, NULL);
+    SM_RT_Init(&test_sm, &TEST_STATE_A, pathBuffer, 8, NULL, NULL);
+    result = SM_RT_Init(&test_sm, &TEST_STATE_A, pathBuffer, 8, NULL, NULL);
     printf("    Double init test: %s\n", 
            (result == SM_RT_RESULT_ERROR_ALREADY_INIT) ? "PASSED" : "FAILED");
     

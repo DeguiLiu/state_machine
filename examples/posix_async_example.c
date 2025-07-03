@@ -98,8 +98,8 @@
  
  /* ---- 状态机实例和互斥/队列 ---- */
  static SM_RT_Instance sm_instance;
- static const SM_State *entry_path_buffer[4];
- static ExampleUserData user_data;
+ static const SM_State *entryPathBuffer[4];
+ static ExampleUserData userData;
  
  static mqd_t event_queue = (mqd_t)-1;
  static pthread_mutex_t sm_mutex;
@@ -247,10 +247,10 @@
      sm_instance.mutex = &sm_mutex;
  
      /* 2. 初始化状态机 */
-     memset(&user_data, 0, sizeof(user_data));
-     SM_Init(&sm_instance.base_sm, &idle_state, entry_path_buffer,
-             sizeof(entry_path_buffer)/sizeof(entry_path_buffer[0]),
-             &user_data, NULL);
+     memset(&userData, 0, sizeof(userData));
+     SM_Init(&sm_instance.base_sm, &idle_state, entryPathBuffer,
+             sizeof(entryPathBuffer)/sizeof(entryPathBuffer[0]),
+             &userData, NULL);
  
      /* 3. 启动worker线程 */
      pthread_t worker;
@@ -297,10 +297,10 @@
      pthread_join(worker, NULL);
  
      /* 11. 输出统计 */
-     printf("Tick count (async): %d\n", user_data.tick_count);
-     printf("Pause count (async): %d\n", user_data.pause_count);
-     printf("Sync event dispatched count (sync): %d\n", user_data.sync_count);
-     printf("Async event dispatched count (async): %d\n", user_data.async_count);
+     printf("Tick count (async): %d\n", userData.tick_count);
+     printf("Pause count (async): %d\n", userData.pause_count);
+     printf("Sync event dispatched count (sync): %d\n", userData.sync_count);
+     printf("Async event dispatched count (async): %d\n", userData.async_count);
  
      /* 12. 清理资源 */
      mq_close(event_queue);
