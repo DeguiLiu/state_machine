@@ -44,16 +44,16 @@
  * @brief Result codes for RTT state machine operations.
  */
 typedef enum {
-    SM_RTT_RESULT_SUCCESS = 0,    /**< Operation completed successfully. */
-    SM_RTT_RESULT_ERROR_NULL_PTR, /**< Null pointer provided as parameter. */
-    SM_RTT_RESULT_ERROR_INVALID,  /**< Invalid parameter value. */
-    SM_RTT_RESULT_ERROR_NOT_INIT, /**< State machine not initialized. */
-    SM_RTT_RESULT_ERROR_ALREADY_INIT, /**< State machine already initialized. */
-    SM_RTT_RESULT_ERROR_NOT_STARTED,  /**< State machine not started. */
-    SM_RTT_RESULT_ERROR_ALREADY_STARTED, /**< State machine already started. */
-    SM_RTT_RESULT_ERROR_QUEUE_FULL,   /**< Event queue is full. */
-    SM_RTT_RESULT_ERROR_UNKNOWN   /**< Unknown error occurred. */
-} SM_RTT_Result;
+    sm_rtt_result_success = 0,    /**< Operation completed successfully. */
+    sm_rtt_result_error_null_ptr, /**< Null pointer provided as parameter. */
+    sm_rtt_result_error_invalid,  /**< Invalid parameter value. */
+    sm_rtt_result_error_not_init, /**< State machine not initialized. */
+    sm_rtt_result_error_already_init, /**< State machine already initialized. */
+    sm_rtt_result_error_not_started,  /**< State machine not started. */
+    sm_rtt_result_error_already_started, /**< State machine already started. */
+    sm_rtt_result_error_queue_full,   /**< Event queue is full. */
+    sm_rtt_result_error_unknown   /**< Unknown error occurred. */
+} Sm_Rtt_Result;
 
 /**
  * @brief State machine statistics.
@@ -64,20 +64,20 @@ typedef struct {
     uint32_t total_transitions;         /**< Total number of state transitions. */
     uint32_t current_queue_depth;       /**< Current depth of event queue. */
     uint32_t max_queue_depth;          /**< Maximum depth reached by event queue. */
-} SM_RTT_Statistics;
+} Sm_Rtt_Statistics;
 
 /**
  * @brief RTT state machine instance with thread-safe operations.
  */
 typedef struct {
     SM_StateMachine     base_sm;        /**< Base state machine instance. */
-    SM_RTT_Statistics   stats;          /**< Usage statistics. */
+    Sm_Rtt_Statistics   stats;          /**< Usage statistics. */
     bool                is_initialized; /**< Initialization status flag. */
     bool                is_started;     /**< Started status flag. */
     void               *worker_thread;  /**< RT-Thread worker thread handle. */
     void               *event_queue;    /**< RT-Thread message queue handle. */
     void               *mutex;          /**< RT-Thread mutex for thread safety. */
-} SM_RTT_Instance;
+} Sm_Rtt_Instance;
 
 /* --- Public API --- */
 
@@ -89,9 +89,9 @@ typedef struct {
  * @param[in]  buffer_size      Size of the entry path buffer.
  * @param[in]  user_data        Optional pointer to user data.
  * @param[in]  unhandled_hook   Optional hook for unhandled events.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
+Sm_Rtt_Result sm_rtt_init(Sm_Rtt_Instance *rtt_sm,
                           const SM_State *initial_state,
                           const SM_State **entry_path_buffer,
                           uint8_t buffer_size,
@@ -101,75 +101,75 @@ SM_RTT_Result SM_RTT_Init(SM_RTT_Instance *rtt_sm,
 /**
  * @brief Starts the RTT state machine worker thread.
  * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_Start(SM_RTT_Instance *rtt_sm);
+Sm_Rtt_Result sm_rtt_start(Sm_Rtt_Instance *rtt_sm);
 
 /**
  * @brief Stops the RTT state machine worker thread.
  * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_Stop(SM_RTT_Instance *rtt_sm);
+Sm_Rtt_Result sm_rtt_stop(Sm_Rtt_Instance *rtt_sm);
 
 /**
  * @brief Posts an event to the RTT state machine queue.
  * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
  * @param[in]     event  Pointer to the event to post.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_PostEvent(SM_RTT_Instance *rtt_sm, const SM_Event *event);
+Sm_Rtt_Result sm_rtt_post_event(Sm_Rtt_Instance *rtt_sm, const SM_Event *event);
 
 /**
  * @brief Posts an event with ID to the RTT state machine queue.
  * @param[in,out] rtt_sm    Pointer to the RTT state machine instance.
  * @param[in]     event_id  Event identifier.
  * @param[in]     context   Optional event context data.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_PostEventId(SM_RTT_Instance *rtt_sm, uint32_t event_id, void *context);
+Sm_Rtt_Result sm_rtt_post_event_id(Sm_Rtt_Instance *rtt_sm, uint32_t event_id, void *context);
 
 /**
  * @brief Resets the RTT state machine to its initial state.
  * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_Reset(SM_RTT_Instance *rtt_sm);
+Sm_Rtt_Result sm_rtt_reset(Sm_Rtt_Instance *rtt_sm);
 
 /**
  * @brief Checks if the current state is a specific state or substate.
  * @param[in]  rtt_sm      Pointer to the RTT state machine instance.
  * @param[in]  state       The state to check against.
  * @param[out] is_in_state Pointer to store the result.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_IsInState(const SM_RTT_Instance *rtt_sm, 
-                               const SM_State *state, 
-                               bool *is_in_state);
+Sm_Rtt_Result sm_rtt_is_in_state(const Sm_Rtt_Instance *rtt_sm, 
+                                 const SM_State *state, 
+                                 bool *is_in_state);
 
 /**
  * @brief Gets the name of the current state.
  * @param[in]  rtt_sm     Pointer to the RTT state machine instance.
  * @param[out] state_name Pointer to store the state name pointer.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_GetCurrentStateName(const SM_RTT_Instance *rtt_sm, 
-                                         const char **state_name);
+Sm_Rtt_Result sm_rtt_get_current_state_name(const Sm_Rtt_Instance *rtt_sm, 
+                                            const char **state_name);
 
 /**
  * @brief Gets the current statistics of the RTT state machine.
  * @param[in]  rtt_sm Pointer to the RTT state machine instance.
  * @param[out] stats  Pointer to store the statistics.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_GetStatistics(const SM_RTT_Instance *rtt_sm, 
-                                   SM_RTT_Statistics *stats);
+Sm_Rtt_Result sm_rtt_get_statistics(const Sm_Rtt_Instance *rtt_sm, 
+                                    Sm_Rtt_Statistics *stats);
 
 /**
  * @brief Resets the statistics of the RTT state machine.
  * @param[in,out] rtt_sm Pointer to the RTT state machine instance.
- * @return SM_RTT_RESULT_SUCCESS on success, error code otherwise.
+ * @return sm_rtt_result_success on success, error code otherwise.
  */
-SM_RTT_Result SM_RTT_ResetStatistics(SM_RTT_Instance *rtt_sm);
+Sm_Rtt_Result sm_rtt_reset_statistics(Sm_Rtt_Instance *rtt_sm);
 
 #endif /* STATE_MACHINE_RTT_H */

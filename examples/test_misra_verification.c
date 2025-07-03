@@ -57,43 +57,43 @@ int main(void)
     
     // Test 2: RTT wrapper error handling
     printf("\n2. Testing RTT wrapper error handling...\n");
-    SM_RTT_Instance rtt_sm = {0};
-    SM_RTT_Result result;
+    Sm_Rtt_Instance rtt_sm = {0};
+    Sm_Rtt_Result result;
     
     // Test NULL pointer handling
-    result = SM_RTT_Init(NULL, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
+    result = sm_rtt_init(NULL, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
     printf("   NULL pointer test: %s\n", 
-           (result == SM_RTT_RESULT_ERROR_NULL_PTR) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_error_null_ptr) ? "PASS" : "FAIL");
     
     // Test invalid buffer size
-    result = SM_RTT_Init(&rtt_sm, &TEST_STATE_1, path_buffer, 0, NULL, NULL);
+    result = sm_rtt_init(&rtt_sm, &TEST_STATE_1, path_buffer, 0, NULL, NULL);
     printf("   Invalid buffer size test: %s\n", 
-           (result == SM_RTT_RESULT_ERROR_INVALID) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_error_invalid) ? "PASS" : "FAIL");
     
     // Test proper initialization
-    result = SM_RTT_Init(&rtt_sm, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
+    result = sm_rtt_init(&rtt_sm, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
     printf("   Proper initialization: %s\n", 
-           (result == SM_RTT_RESULT_SUCCESS) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_success) ? "PASS" : "FAIL");
     
     // Test double initialization
-    result = SM_RTT_Init(&rtt_sm, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
+    result = sm_rtt_init(&rtt_sm, &TEST_STATE_1, path_buffer, 4, NULL, NULL);
     printf("   Double initialization test: %s\n", 
-           (result == SM_RTT_RESULT_ERROR_ALREADY_INIT) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_error_already_init) ? "PASS" : "FAIL");
     
     // Test operations without start
-    result = SM_RTT_PostEventId(&rtt_sm, 1, NULL);
+    result = sm_rtt_post_event_id(&rtt_sm, 1, NULL);
     printf("   Operation without start: %s\n", 
-           (result == SM_RTT_RESULT_ERROR_NOT_STARTED) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_error_not_started) ? "PASS" : "FAIL");
     
     // Test start
-    result = SM_RTT_Start(&rtt_sm);
+    result = sm_rtt_start(&rtt_sm);
     printf("   Start operation: %s\n", 
-           (result == SM_RTT_RESULT_SUCCESS) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_success) ? "PASS" : "FAIL");
     
     // Test operation after start
-    result = SM_RTT_PostEventId(&rtt_sm, 1, NULL);
+    result = sm_rtt_post_event_id(&rtt_sm, 1, NULL);
     printf("   Operation after start: %s\n", 
-           (result == SM_RTT_RESULT_SUCCESS) ? "PASS" : "FAIL");
+           (result == sm_rtt_result_success) ? "PASS" : "FAIL");
     
     printf("\n=== All verification tests completed ===\n");
     return 0;
