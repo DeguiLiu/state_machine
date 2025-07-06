@@ -23,21 +23,47 @@ typedef struct
 } AppData;
 
 // --- Action & Guard Functions ---
-void entry_On(SM_StateMachine *sm, const SM_Event *event) { printf("  (Entry)-> On\n"); }
-void exit_On(SM_StateMachine *sm, const SM_Event *event) { printf("  (Exit) -> On\n"); }
-void entry_Idle(SM_StateMachine *sm, const SM_Event *event) { printf("    (Entry)-> Idle\n"); }
-void entry_Running(SM_StateMachine *sm, const SM_Event *event) { printf("    (Entry)-> Running\n"); }
-void exit_Running(SM_StateMachine *sm, const SM_Event *event) { printf("    (Exit) -> Running\n"); }
-void on_power_off(SM_StateMachine *sm, const SM_Event *event) { printf("  Action: Shutting down...\n"); }
+void entry_On(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("  (Entry)-> On\n");
+}
+void exit_On(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("  (Exit) -> On\n");
+}
+void entry_Idle(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("    (Entry)-> Idle\n");
+}
+void entry_Running(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("    (Entry)-> Running\n");
+}
+void exit_Running(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("    (Exit) -> Running\n");
+}
+void on_power_off(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    printf("  Action: Shutting down...\n");
+}
 void on_task_done(SM_StateMachine *sm, const SM_Event *event)
 {
     AppData *data = (AppData *)sm->userData;
     data->tasks_completed++;
+    (void)event;
     printf("  Action: Task finished. Total completed: %d\n", data->tasks_completed);
 }
 bool can_start_task(SM_StateMachine *sm, const SM_Event *event)
 {
     AppData *data = (AppData *)sm->userData;
+    (void)event;
     printf("  Guard: Checking if tasks completed < 3... (%s)\n", (data->tasks_completed < 3) ? "Yes" : "No");
     return data->tasks_completed < 3;
 }

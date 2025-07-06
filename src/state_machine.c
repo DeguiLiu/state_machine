@@ -268,7 +268,7 @@ static uint8_t get_state_depth(const SM_State *state)
     return depth;
 }
 
-static const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
+const SM_State *find_lca(const SM_State *s1, const SM_State *s2)
 {
     const SM_State *result = NULL;
     const SM_State *p1 = NULL;
