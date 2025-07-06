@@ -9,7 +9,11 @@ static const SM_State TEST_STATE_1;
 static const SM_State TEST_STATE_2;
 
 // Test states
-static void test_entry(SM_StateMachine *sm, const SM_Event *event) { /* do nothing */ }
+static void test_entry(SM_StateMachine *sm, const SM_Event *event) {
+    (void)sm;
+    (void)event;
+    /* do nothing */
+}
 
 static const SM_Transition T1[] = {
     {1, &TEST_STATE_2, NULL, NULL, SM_TRANSITION_EXTERNAL}

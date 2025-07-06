@@ -133,26 +133,40 @@
  /* ---- 事件投递封装 ---- */
  static int sm_post_event(SM_RT_Instance *sm, const SM_Event *event)
  {
+     (void)sm;
+     (void)event;
      return mq_send(event_queue, (const char*)event, sizeof(*event), 0);
  }
  
  /* ---- 状态动作实现 ---- */
  static void idle_entry(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Idle] Entry\n");
  }
  static void idle_exit(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Idle] Exit\n");
  }
  static void running_entry(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Running] Entry\n");
  }
  static void running_exit(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Running] Exit\n");
  }
  static void paused_entry(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Paused] Entry\n");
  }
  static void paused_exit(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      printf("[Paused] Exit\n");
  }
  static void action_start(SM_StateMachine *sm, const SM_Event *event) {
@@ -170,6 +184,8 @@
          inst->base_sm.currentState->entryAction(sm, event);
  }
  static void action_tick(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      ExampleUserData *ud = (ExampleUserData*)sm->userData;
      ud->tick_count++;
      printf("[Action] TICK, count=%d\n", ud->tick_count);
@@ -196,6 +212,8 @@
          inst->base_sm.currentState->entryAction(sm, event);
  }
  static void action_sync(SM_StateMachine *sm, const SM_Event *event) {
+     (void)sm;
+     (void)event;
      ExampleUserData *ud = (ExampleUserData*)sm->userData;
      ud->sync_count++;
      printf("[Action] SYNC_EVENT received synchronously, sync_count=%d\n", ud->sync_count);
@@ -204,6 +222,7 @@
  /* ---- 生产者线程：周期性投递TICK事件 ---- */
  static void* tick_producer_thread(void *param)
  {
+     (void)param;
      int i = 0;
      SM_Event event = { .id=EVENT_TICK, .context=NULL };
      while (i++ < 10) {
@@ -216,6 +235,7 @@
  /* ---- 生产者线程2：投递RESUME事件 ---- */
  static void* resume_producer_thread(void *param)
  {
+     (void)param;
      usleep(1500*1000);
      printf("[Producer2] Send RESUME\n");
      SM_Event event = { .id=EVENT_RESUME, .context=NULL };

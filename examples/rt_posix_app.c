@@ -524,3 +524,67 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+/*
+test@pi:~/state_machine$ ./rt_posix_app demo
+Demo: run a full POST + RUN + ERROR + MAINT + UPGRADE + RESET flow
+==> Enter Unknown
+Complex RT State machine initialized. Initial State: Off
+
+--- Event received: 1, dispatching to state machine ---
+<== Exit Off
+==> Enter PowerOn
+POST: Start self-check sequence.
+POST: Step 1 started.
+POST: Step 1 ok.
+<== Exit PostStep
+POST: Step 2 started.
+POST: Step 2 failed!
+<== Exit PostStep
+POST: Retry 1
+<== Exit PostRetry
+POST: Step 3 started.
+POST: All steps done.
+<== Exit PostStep
+POST: Self-check passed.
+<== Exit PostPass
+<== Exit PostPass
+<== Exit PostPass
+System running normally.
+Current State: Run
+
+--- Event received: 7, dispatching to state machine ---
+System running error! Error count: 1
+Current State: RunError
+
+--- Event received: 14, dispatching to state machine ---
+<== Exit RunError
+Current State: Run
+
+--- Event received: 8, dispatching to state machine ---
+<== Exit Run
+Enter maintenance mode.
+Current State: Maint
+
+--- Event received: 9, dispatching to state machine ---
+<== Exit Maint
+System running normally.
+Current State: Run
+
+--- Event received: 10, dispatching to state machine ---
+<== Exit Run
+Enter upgrade mode.
+Current State: Upgrade
+
+--- Event received: 11, dispatching to state machine ---
+Upgrade finished, system will reset.
+<== Exit UpgradeDone
+<== Exit UpgradeDone
+==> Enter Off
+Current State: Off
+
+--- Event received: 13, dispatching to state machine ---
+--- Unhandled Event: Event 13 received in state 'Off' ---
+Current State: Off
+
+*/

@@ -23,7 +23,7 @@ RT_OBJECTS = $(BUILDDIR)/state_machine_rt.o
 ALL_OBJECTS = $(BASE_OBJECTS) $(RT_OBJECTS)
 
 # Linux-compatible examples (excluding RT-Thread specific ones)
-EXAMPLES = test_state_machine test_rt_compliance test_misra_verification posix_async_example
+EXAMPLES = test_state_machine test_rt_compliance test_misra_verification posix_async_example posix_app
 
 # Default target
 all: $(EXAMPLES)
@@ -51,6 +51,10 @@ test_misra_verification: $(ALL_OBJECTS) $(EXAMPLEDIR)/test_misra_verification.c
 # POSIX async example (RT module with pthread/mqueue)
 posix_async_example: $(RT_OBJECTS) $(EXAMPLEDIR)/posix_async_example.c
 	$(CC) $(CFLAGS) -o $@ $(RT_OBJECTS) $(EXAMPLEDIR)/posix_async_example.c $(LDFLAGS)
+
+# POSIX async example (RT module with pthread/mqueue)
+posix_app: $(RT_OBJECTS) $(EXAMPLEDIR)/posix_app.c
+	$(CC) $(CFLAGS) -o $@ $(RT_OBJECTS) $(EXAMPLEDIR)/posix_app.c $(LDFLAGS)
 
 # Static library targets
 libstatemachine.a: $(BASE_OBJECTS)

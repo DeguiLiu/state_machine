@@ -13,10 +13,14 @@ static const SM_State TEST_STATE_A;
 static const SM_State TEST_STATE_B;
 
 static void entry_A(SM_StateMachine *sm, const SM_Event *event) { 
+    (void)sm;
+    (void)event;
     printf("Entry A\n"); 
 }
 
 static void entry_B(SM_StateMachine *sm, const SM_Event *event) { 
+    (void)sm;
+    (void)event;
     printf("Entry B\n"); 
 }
 

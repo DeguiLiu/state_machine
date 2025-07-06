@@ -11,7 +11,7 @@
 #include "state_machine_rt.h"
 
 /* --- Private Helper Function Declarations --- */
-static void worker_thread_entry(void *parameter);
+static void worker_thread_entry(void *parameter) __attribute__((unused));
 static SM_RT_Result dispatch_event_internal(SM_RT_Instance *rt_sm, const SM_Event *event);
 static void perform_transition_internal(SM_StateMachine *sm, const SM_State *target_state, const SM_Event *event);
 static uint8_t get_state_depth_internal(const SM_State *state);
@@ -460,6 +460,7 @@ SM_RT_Result SM_RT_ResetStatistics(SM_RT_Instance *rt_sm)
 
 static void worker_thread_entry(void *parameter)
 {
+    (void)parameter;
     SM_RT_Instance *rt_sm = NULL;
     bool valid_parameter = false;
     
