@@ -17,10 +17,6 @@
 #define SM_MQ_NAME "/sm_posix_app"
 
 /* ===================== 1. Event Definitions ===================== */
-/*
- * Enumeration of all events for the system state machine.
- * Covers POST, running, maintenance, upgrade, etc.
- */
 typedef enum
 {
     SM_EVENT_POWER_ON = 1,
@@ -62,120 +58,101 @@ typedef struct
     int32_t upgrade_flag;
 } sm_system_data_t;
 
-/* ===================== 4. Actions and Guard Functions ===================== */
-static void sm_entry_print(SM_StateMachine *sm, const SM_Event *event)
+/* ===================== 4. Unified Actions and Guard Functions ===================== */
+
+/**
+ * Common entry action for all states. 
+ * Behaviors are distinguished by state name using a switch statement.
+ */
+static void sm_entry_action(SM_StateMachine *sm, const SM_Event *event)
 {
     (void)event;
-    printf("==> Enter %s\n", SM_GetCurrentStateName(sm));
-    // 自动从 PowerOn 进入 POST
-    if (strcmp(SM_GetCurrentStateName(sm), "PowerOn") == 0) {
-        // 自动触发 POST 流程
+    const char* state = SM_GetCurrentStateName(sm);
+    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
+
+    printf("==> Enter %s\n", state);
+
+    if (strcmp(state, "PowerOn") == 0) {
+        // Automatically enter POST flow
         SM_Event evt = {SM_EVENT_POST_STEP_OK, NULL};
         SM_Dispatch(sm, &evt);
+    } else if (strcmp(state, "Post") == 0) {
+        data->post_step = 0;
+        data->post_fail_count = 0;
+        printf("POST: Start self-check sequence.\n");
+    } else if (strcmp(state, "PostStep") == 0) {
+        data->post_step++;
+        printf("POST: Step %d started.\n", data->post_step);
+        if ((data->post_step % 2) == 0) {
+            printf("POST: Step %d failed!\n", data->post_step);
+            SM_Event fail_evt = {SM_EVENT_POST_STEP_FAIL, NULL};
+            SM_Dispatch(sm, &fail_evt);
+        } else if (data->post_step < 3) {
+            printf("POST: Step %d ok.\n", data->post_step);
+            SM_Event ok_evt = {SM_EVENT_POST_STEP_OK, NULL};
+            SM_Dispatch(sm, &ok_evt);
+        } else {
+            printf("POST: All steps done.\n");
+            SM_Event done_evt = {SM_EVENT_POST_DONE, NULL};
+            SM_Dispatch(sm, &done_evt);
+        }
+    } else if (strcmp(state, "PostRetry") == 0) {
+        data->post_fail_count++;
+        printf("POST: Retry %d\n", data->post_fail_count);
+        if (data->post_fail_count < 2) {
+            SM_Event retry_evt = {SM_EVENT_POST_RETRY, NULL};
+            SM_Dispatch(sm, &retry_evt);
+        } else {
+            printf("POST: Retry failed, enter FAIL.\n");
+            SM_Event fail_evt = {SM_EVENT_POST_STEP_FAIL, NULL};
+            SM_Dispatch(sm, &fail_evt);
+        }
+    } else if (strcmp(state, "PostFail") == 0) {
+        printf("POST: Self-check failed! Wait for manual reset or force recover.\n");
+    } else if (strcmp(state, "PostPass") == 0) {
+        printf("POST: Self-check passed.\n");
+        SM_Event enter_run = {SM_EVENT_ENTER_RUN, NULL};
+        SM_Dispatch(sm, &enter_run);
+    } else if (strcmp(state, "Run") == 0) {
+        printf("System running normally.\n");
+    } else if (strcmp(state, "RunError") == 0) {
+        data->run_error_count++;
+        printf("System running error! Error count: %d\n", data->run_error_count);
+    } else if (strcmp(state, "Maint") == 0) {
+        printf("Enter maintenance mode.\n");
+    } else if (strcmp(state, "Upgrade") == 0) {
+        data->upgrade_flag = 1;
+        printf("Enter upgrade mode.\n");
+    } else if (strcmp(state, "UpgradeDone") == 0) {
+        data->upgrade_flag = 0;
+        printf("Upgrade finished, system will reset.\n");
+        SM_Event reset_evt = {SM_EVENT_RESET, NULL};
+        SM_Dispatch(sm, &reset_evt);
     }
 }
-static void sm_exit_print(SM_StateMachine *sm, const SM_Event *event)
+
+/**
+ * Common exit action for all states.
+ */
+static void sm_exit_action(SM_StateMachine *sm, const SM_Event *event)
 {
     (void)event;
     printf("<== Exit %s\n", SM_GetCurrentStateName(sm));
 }
-static void sm_entry_post(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->post_step = 0;
-    data->post_fail_count = 0;
-    printf("POST: Start self-check sequence.\n");
-}
-static void sm_entry_post_step(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->post_step++;
-    printf("POST: Step %d started.\n", data->post_step);
-    if ((data->post_step % 2) == 0) {
-        printf("POST: Step %d failed!\n", data->post_step);
-        SM_Event fail_evt = {SM_EVENT_POST_STEP_FAIL, NULL};
-        SM_Dispatch(sm, &fail_evt);
-    } else if (data->post_step < 3) {
-        printf("POST: Step %d ok.\n", data->post_step);
-        SM_Event ok_evt = {SM_EVENT_POST_STEP_OK, NULL};
-        SM_Dispatch(sm, &ok_evt);
-    } else {
-        printf("POST: All steps done.\n");
-        SM_Event done_evt = {SM_EVENT_POST_DONE, NULL};
-        SM_Dispatch(sm, &done_evt);
-    }
-}
-static void sm_entry_post_retry(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->post_fail_count++;
-    printf("POST: Retry %d\n", data->post_fail_count);
-    if (data->post_fail_count < 2) {
-        SM_Event retry_evt = {SM_EVENT_POST_RETRY, NULL};
-        SM_Dispatch(sm, &retry_evt);
-    } else {
-        printf("POST: Retry failed, enter FAIL.\n");
-        SM_Event fail_evt = {SM_EVENT_POST_STEP_FAIL, NULL};
-        SM_Dispatch(sm, &fail_evt);
-    }
-}
-static void sm_entry_post_fail(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)sm;
-    (void)event;
-    printf("POST: Self-check failed! Wait for manual reset or force recover.\n");
-}
-static void sm_entry_post_pass(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    printf("POST: Self-check passed.\n");
-    SM_Event enter_run = {SM_EVENT_ENTER_RUN, NULL};
-    SM_Dispatch(sm, &enter_run);
-}
-static void sm_entry_run(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)sm;
-    (void)event;
-    printf("System running normally.\n");
-}
-static void sm_entry_run_error(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->run_error_count++;
-    printf("System running error! Error count: %d\n", data->run_error_count);
-}
-static void sm_entry_maint(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)sm;
-    (void)event;
-    printf("Enter maintenance mode.\n");
-}
-static void sm_entry_upgrade(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->upgrade_flag = 1;
-    printf("Enter upgrade mode.\n");
-}
-static void sm_entry_upgrade_done(SM_StateMachine *sm, const SM_Event *event)
-{
-    (void)event;
-    sm_system_data_t *data = (sm_system_data_t*)sm->userData;
-    data->upgrade_flag = 0;
-    printf("Upgrade finished, system will reset.\n");
-    SM_Event reset_evt = {SM_EVENT_RESET, NULL};
-    SM_Dispatch(sm, &reset_evt);
-}
+
+/**
+ * Guard for POST retry - only allow retry if fail count < 2.
+ */
 static bool sm_guard_post_retry(SM_StateMachine *sm, const SM_Event *event)
 {
     (void)event;
     sm_system_data_t *data = (sm_system_data_t*)sm->userData;
     return data->post_fail_count < 2;
 }
+
+/**
+ * Guard for RunError recovery - only allow if error count < 3.
+ */
 static bool sm_guard_run_error_limit(SM_StateMachine *sm, const SM_Event *event)
 {
     (void)event;
@@ -184,6 +161,10 @@ static bool sm_guard_run_error_limit(SM_StateMachine *sm, const SM_Event *event)
 }
 
 /* ===================== 5. Transition Tables ===================== */
+/* 
+ * Many transition tables are reused or simplified since logic is now handled in entry action.
+ * Only guard logic or different targets require different transition sets.
+ */
 static const SM_Transition sm_trans_off[] = {
     {SM_EVENT_POWER_ON, &sm_state_power_on, NULL, NULL, SM_TRANSITION_EXTERNAL}
 };
@@ -192,13 +173,7 @@ static const SM_Transition sm_trans_power_on[] = {
     {SM_EVENT_POST_STEP_FAIL, &sm_state_post_fail, NULL, NULL, SM_TRANSITION_EXTERNAL},
     {SM_EVENT_POST_DONE, &sm_state_post_pass, NULL, NULL, SM_TRANSITION_EXTERNAL}
 };
-static const SM_Transition sm_trans_post[] = {
-    {SM_EVENT_POST_STEP_OK, &sm_state_post_step, NULL, NULL, SM_TRANSITION_EXTERNAL},
-    {SM_EVENT_POST_STEP_FAIL, &sm_state_post_retry, sm_guard_post_retry, NULL, SM_TRANSITION_EXTERNAL},
-    {SM_EVENT_POST_STEP_FAIL, &sm_state_post_fail, NULL, NULL, SM_TRANSITION_EXTERNAL},
-    {SM_EVENT_POST_DONE, &sm_state_post_pass, NULL, NULL, SM_TRANSITION_EXTERNAL}
-};
-static const SM_Transition sm_trans_post_step[] = {
+static const SM_Transition sm_trans_post_common[] = {
     {SM_EVENT_POST_STEP_OK, &sm_state_post_step, NULL, NULL, SM_TRANSITION_EXTERNAL},
     {SM_EVENT_POST_STEP_FAIL, &sm_state_post_retry, sm_guard_post_retry, NULL, SM_TRANSITION_EXTERNAL},
     {SM_EVENT_POST_STEP_FAIL, &sm_state_post_fail, NULL, NULL, SM_TRANSITION_EXTERNAL},
@@ -236,98 +211,99 @@ static const SM_Transition sm_trans_upgrade_done[] = {
 };
 
 /* ===================== 6. State Definitions ===================== */
+/* Most states now use the same entry/exit function for simplicity. */
 static const SM_State sm_state_off = {
     .parent = NULL,
-    .entryAction = sm_entry_print,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_off,
     .numTransitions = sizeof(sm_trans_off) / sizeof(sm_trans_off[0]),
     .name = "Off"
 };
 static const SM_State sm_state_power_on = {
     .parent = NULL,
-    .entryAction = sm_entry_print,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_power_on,
     .numTransitions = sizeof(sm_trans_power_on) / sizeof(sm_trans_power_on[0]),
     .name = "PowerOn"
 };
 static const SM_State sm_state_post = {
     .parent = &sm_state_power_on,
-    .entryAction = sm_entry_post,
-    .exitAction = sm_exit_print,
-    .transitions = sm_trans_post,
-    .numTransitions = sizeof(sm_trans_post) / sizeof(sm_trans_post[0]),
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
+    .transitions = sm_trans_post_common,
+    .numTransitions = sizeof(sm_trans_post_common) / sizeof(sm_trans_post_common[0]),
     .name = "Post"
 };
 static const SM_State sm_state_post_step = {
     .parent = &sm_state_post,
-    .entryAction = sm_entry_post_step,
-    .exitAction = sm_exit_print,
-    .transitions = sm_trans_post_step,
-    .numTransitions = sizeof(sm_trans_post_step) / sizeof(sm_trans_post_step[0]),
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
+    .transitions = sm_trans_post_common,
+    .numTransitions = sizeof(sm_trans_post_common) / sizeof(sm_trans_post_common[0]),
     .name = "PostStep"
 };
 static const SM_State sm_state_post_retry = {
     .parent = &sm_state_post,
-    .entryAction = sm_entry_post_retry,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_post_retry,
     .numTransitions = sizeof(sm_trans_post_retry) / sizeof(sm_trans_post_retry[0]),
     .name = "PostRetry"
 };
 static const SM_State sm_state_post_fail = {
     .parent = &sm_state_post,
-    .entryAction = sm_entry_post_fail,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_post_fail,
     .numTransitions = sizeof(sm_trans_post_fail) / sizeof(sm_trans_post_fail[0]),
     .name = "PostFail"
 };
 static const SM_State sm_state_post_pass = {
     .parent = &sm_state_post,
-    .entryAction = sm_entry_post_pass,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_post_pass,
     .numTransitions = sizeof(sm_trans_post_pass) / sizeof(sm_trans_post_pass[0]),
     .name = "PostPass"
 };
 static const SM_State sm_state_run = {
     .parent = NULL,
-    .entryAction = sm_entry_run,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_run,
     .numTransitions = sizeof(sm_trans_run) / sizeof(sm_trans_run[0]),
     .name = "Run"
 };
 static const SM_State sm_state_run_error = {
     .parent = &sm_state_run,
-    .entryAction = sm_entry_run_error,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_run_error,
     .numTransitions = sizeof(sm_trans_run_error) / sizeof(sm_trans_run_error[0]),
     .name = "RunError"
 };
 static const SM_State sm_state_maint = {
     .parent = NULL,
-    .entryAction = sm_entry_maint,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_maint,
     .numTransitions = sizeof(sm_trans_maint) / sizeof(sm_trans_maint[0]),
     .name = "Maint"
 };
 static const SM_State sm_state_upgrade = {
     .parent = NULL,
-    .entryAction = sm_entry_upgrade,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_upgrade,
     .numTransitions = sizeof(sm_trans_upgrade) / sizeof(sm_trans_upgrade[0]),
     .name = "Upgrade"
 };
 static const SM_State sm_state_upgrade_done = {
     .parent = &sm_state_upgrade,
-    .entryAction = sm_entry_upgrade_done,
-    .exitAction = sm_exit_print,
+    .entryAction = sm_entry_action,
+    .exitAction = sm_exit_action,
     .transitions = sm_trans_upgrade_done,
     .numTransitions = sizeof(sm_trans_upgrade_done) / sizeof(sm_trans_upgrade_done[0]),
     .name = "UpgradeDone"
@@ -373,7 +349,6 @@ static void* sm_state_machine_thread_entry(void* parameter)
         }
         else
         {
-            // usleep(1000);
             sleep(1); // Sleep to avoid busy waiting
         }
     }
@@ -510,8 +485,6 @@ int main(int argc, char **argv)
         }
 
         sm_post_event(event, NULL);
-
-        /* Wait for the state machine thread to process the event */
         sleep(1);
     }
 
@@ -524,131 +497,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-/* ===================== 13. Usage Instructions ===================== */
-/**
- * 使用说明
- *
- * `posix_app.c` 是一个基于 POSIX 线程和消息队列的状态机应用示例，功能与 RT-Thread 版本一致，可在 Linux 下直接运行。
- *
- * ## 编译
- *
- * 请确保你已经编译生成了 `build/state_machine.o` 和 `build/state_machine_rt.o`，然后使用如下命令编译：
- *
- * ```sh
- * gcc -Wall -Wextra -std=c99 -pedantic -I./inc -o posix_app \
- *     build/state_machine.o build/state_machine_rt.o examples/posix_app.c -lpthread -lrt
- * ```
- *
- * ## 运行
- *
- * 运行时可通过命令行参数指定要投递的事件。例如：
- *
- * ```sh
- * ./posix_app poweron
- * ./posix_app stepok
- * ./posix_app stepfail
- * ./posix_app retry
- * ./posix_app done
- * ./posix_app run
- * ./posix_app runerr
- * ./posix_app maint
- * ./posix_app exitmaint
- * ./posix_app upgrade
- * ./posix_app upgradedone
- * ./posix_app reset
- * ./posix_app shutdown
- * ./posix_app recover
- * ./posix_app demo
- * ```
- *
- * 每次运行程序会初始化状态机并投递一次事件，状态机会在独立线程中处理事件并输出状态变化。
- *
- * ## 查看帮助
- *
- * 如果不带参数运行，会输出所有支持的事件：
- *
- * ```sh
- * ./posix_app
- * ```
- *
- * ## 典型输出
- *
- * ```text
- * $ ./posix_app poweron
- * Complex State machine initialized. Initial State: Off
- *
- * --- Event received: 1, dispatching to state machine ---
- * ==> Enter PowerOn
- * Current State: PowerOn
- * ```
- *
- * ## 注意事项
- *
- * - 每次运行只处理一次事件并退出（如需连续交互可自行扩展 main）。
- * - 事件参数为字符串，具体支持见帮助输出。
- * - 资源会在程序退出时自动清理。
- */
-/*
-test@pi:~/state_machine$ ./posix_app demo
-Demo: run a full POST + RUN + ERROR + MAINT + UPGRADE + RESET flow
-==> Enter Off
-Complex State machine initialized. Initial State: Off
-
---- Event received: 1, dispatching to state machine ---
-<== Exit Off
-==> Enter PowerOn
-POST: Start self-check sequence.
-POST: Step 1 started.
-POST: Step 1 ok.
-<== Exit PostStep
-POST: Step 2 started.
-POST: Step 2 failed!
-<== Exit PostStep
-POST: Retry 1
-<== Exit PostRetry
-POST: Step 3 started.
-POST: All steps done.
-<== Exit PostStep
-POST: Self-check passed.
-<== Exit PostPass
-<== Exit PostPass
-<== Exit PostPass
-System running normally.
-Current State: Run
-
---- Event received: 7, dispatching to state machine ---
-System running error! Error count: 1
-Current State: RunError
-
---- Event received: 14, dispatching to state machine ---
-<== Exit RunError
-Current State: Run
-
---- Event received: 8, dispatching to state machine ---
-<== Exit Run
-Enter maintenance mode.
-Current State: Maint
-
---- Event received: 9, dispatching to state machine ---
-<== Exit Maint
-System running normally.
-Current State: Run
-
---- Event received: 10, dispatching to state machine ---
-<== Exit Run
-Enter upgrade mode.
-Current State: Upgrade
-
---- Event received: 11, dispatching to state machine ---
-Upgrade finished, system will reset.
-<== Exit UpgradeDone
-<== Exit UpgradeDone
-==> Enter Off
-Current State: Off
-
---- Event received: 13, dispatching to state machine ---
---- Unhandled Event: Event 13 received in state 'Off' ---
-Event 13 was not handled.
-Current State: Off
-*/
