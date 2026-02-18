@@ -1,7 +1,6 @@
 # .clang-format
 # C Style Guide for state_machine project
 
-Language: C
 BasedOnStyle: LLVM
 
 # =============================================================================
