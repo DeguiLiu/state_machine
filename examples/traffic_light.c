@@ -25,6 +25,7 @@ static void on_enter_red(void *ctx) {
 }
 
 static void on_exit_red(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("    Exiting RED state\n");
 }
 
@@ -34,14 +35,17 @@ static void on_enter_green(void *ctx) {
 }
 
 static void on_exit_green(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("    Exiting GREEN state\n");
 }
 
 static void on_enter_yellow(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("    🟡 YELLOW - Prepare to stop (3 seconds)\n");
 }
 
 static void on_exit_yellow(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("    Exiting YELLOW state\n");
 }
 

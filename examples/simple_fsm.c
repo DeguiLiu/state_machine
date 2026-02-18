@@ -25,22 +25,27 @@ static void on_enter_idle(void *ctx) {
 }
 
 static void on_exit_idle(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("[EXIT] IDLE state\n");
 }
 
 static void on_enter_running(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("[ENTER] RUNNING state\n");
 }
 
 static void on_exit_running(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("[EXIT] RUNNING state\n");
 }
 
 static void on_enter_stopped(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("[ENTER] STOPPED state\n");
 }
 
 static void on_exit_stopped(void *ctx) {
+    (void)ctx;  /* unused parameter */
     printf("[EXIT] STOPPED state\n");
 }
 

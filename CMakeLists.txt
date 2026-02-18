@@ -8,33 +8,28 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -pedantic")
 # Core library
 add_library(state_machine STATIC src/state_machine.c src/state_machine_rt.c)
 target_include_directories(state_machine PUBLIC include)
+target_include_directories(state_machine PRIVATE include/state_machine)
 
 # Tests
 enable_testing()
 add_executable(state_machine_test tests/test_state_machine.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(state_machine_test PRIVATE include)
+target_include_directories(state_machine_test PRIVATE include include/state_machine)
 add_test(NAME state_machine_test COMMAND state_machine_test)
 
 add_executable(rt_compliance_test tests/test_rt_compliance.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(rt_compliance_test PRIVATE include)
+target_include_directories(rt_compliance_test PRIVATE include include/state_machine)
 add_test(NAME rt_compliance_test COMMAND rt_compliance_test)
 
 add_executable(misra_verification tests/test_misra_verification.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(misra_verification PRIVATE include)
+target_include_directories(misra_verification PRIVATE include include/state_machine)
 add_test(NAME misra_verification COMMAND misra_verification)
 
 # Examples
-add_executable(posix_app examples/posix_app.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(posix_app PRIVATE include)
-
-add_executable(posix_async_example examples/posix_async_example.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(posix_async_example PRIVATE include)
-
 add_executable(simple_fsm examples/simple_fsm.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(simple_fsm PRIVATE include)
+target_include_directories(simple_fsm PRIVATE include include/state_machine)
 
 add_executable(traffic_light examples/traffic_light.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(traffic_light PRIVATE include)
+target_include_directories(traffic_light PRIVATE include include/state_machine)
 
 # Code quality
 find_program(CLANG_FORMAT clang-format)
