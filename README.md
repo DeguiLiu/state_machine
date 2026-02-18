@@ -31,17 +31,13 @@ ctest --output-on-failure
 
 ## 示例
 
-### 简单状态机 (simple_fsm.c)
+### 简单 HSM (simple_hsm.c)
 
-演示基本的状态转换和入口/出口动作。
+演示基本的分层状态转换和入口/出口动作。
 
-### 交通灯状态机 (traffic_light.c)
+### 交通灯 HSM (traffic_light.c)
 
-演示实际应用场景：红绿灯状态机。
-
-### POSIX 应用 (posix_app.c)
-
-完整的 POSIX 环境状态机应用示例。
+演示实际应用场景：红绿灯分层状态机。
 
 ### 2.1 POSIX 示例
 

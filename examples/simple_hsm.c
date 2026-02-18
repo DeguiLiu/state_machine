@@ -1,7 +1,7 @@
 /*
- * simple_fsm.c - Simple finite state machine example
+ * simple_hsm.c - Simple hierarchical state machine example
  *
- * Demonstrates basic state machine usage with transitions
+ * Demonstrates basic HSM usage with state transitions
  */
 
 #include <stdio.h>

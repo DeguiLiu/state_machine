@@ -25,8 +25,8 @@ target_include_directories(misra_verification PRIVATE include include/state_mach
 add_test(NAME misra_verification COMMAND misra_verification)
 
 # Examples
-add_executable(simple_fsm examples/simple_fsm.c src/state_machine.c src/state_machine_rt.c)
-target_include_directories(simple_fsm PRIVATE include include/state_machine)
+add_executable(simple_hsm examples/simple_hsm.c src/state_machine.c src/state_machine_rt.c)
+target_include_directories(simple_hsm PRIVATE include include/state_machine)
 
 add_executable(traffic_light examples/traffic_light.c src/state_machine.c src/state_machine_rt.c)
 target_include_directories(traffic_light PRIVATE include include/state_machine)
