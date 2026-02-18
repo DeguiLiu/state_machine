@@ -1,14 +1,43 @@
-# Build artifacts
-test_sm
+# Build directories
 build/
-test_state_machine
-test_rt_compliance
-test_misra_verification
-posix_async_example
+cmake-build-*/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+Makefile
+
+# Compiled objects
 *.o
 *.a
 *.so
 *.dylib
+*.dll
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test outputs
+Testing/
+*.gcda
+*.gcno
+coverage.info
+
+# Legacy build artifacts
+test_sm
+test_state_machine
+test_rt_compliance
+test_misra_verification
+posix_async_example
 
 # Temporary files
 /tmp/

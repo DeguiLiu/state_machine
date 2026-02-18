@@ -1,6 +1,7 @@
 # state_machine
 
-## 1. 介绍
+[![CI](https://github.com/DeguiLiu/state_machine/actions/workflows/ci.yml/badge.svg)](https://github.com/DeguiLiu/state_machine/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 一个轻量级、可移植、支持层级状态的 C 语言状态机框架，适用于嵌入式和 Linux 应用。
 
@@ -8,9 +9,39 @@
 
 state_machine 的作者是 misje, github 地址: https://github.com/misje/stateMachine
 
----
+## 项目结构
 
-## 2. 快速开始
+```
+include/state_machine/    -- 公共头文件
+src/                      -- 核心实现
+tests/                    -- 单元测试
+examples/                 -- 示例程序
+docs/                     -- 设计文档
+CMakeLists.txt           -- CMake 构建配置
+```
+
+## 构建
+
+```bash
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build . -j$(nproc)
+ctest --output-on-failure
+```
+
+## 示例
+
+### 简单状态机 (simple_fsm.c)
+
+演示基本的状态转换和入口/出口动作。
+
+### 交通灯状态机 (traffic_light.c)
+
+演示实际应用场景：红绿灯状态机。
+
+### POSIX 应用 (posix_app.c)
+
+完整的 POSIX 环境状态机应用示例。
 
 ### 2.1 POSIX 示例
 
