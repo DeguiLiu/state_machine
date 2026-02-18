@@ -4,48 +4,44 @@
  * Demonstrates basic HSM usage with state transitions
  */
 
-#include <stdio.h>
 #include "state_machine/state_machine.h"
+#include <stdio.h>
 
-typedef enum {
-    STATE_IDLE = 0,
-    STATE_RUNNING = 1,
-    STATE_STOPPED = 2
-} SystemState;
+typedef enum { STATE_IDLE = 0, STATE_RUNNING = 1, STATE_STOPPED = 2 } SystemState;
 
 typedef struct {
     SystemState state;
     int counter;
 } SystemContext;
 
-static void on_enter_idle(void *ctx) {
-    SystemContext *c = (SystemContext *)ctx;
+static void on_enter_idle(void* ctx) {
+    SystemContext* c = (SystemContext*)ctx;
     printf("[ENTER] IDLE state\n");
     c->counter = 0;
 }
 
-static void on_exit_idle(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_idle(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("[EXIT] IDLE state\n");
 }
 
-static void on_enter_running(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_enter_running(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("[ENTER] RUNNING state\n");
 }
 
-static void on_exit_running(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_running(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("[EXIT] RUNNING state\n");
 }
 
-static void on_enter_stopped(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_enter_stopped(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("[ENTER] STOPPED state\n");
 }
 
-static void on_exit_stopped(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_stopped(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("[EXIT] STOPPED state\n");
 }
 

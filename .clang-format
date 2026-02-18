@@ -1,0 +1,50 @@
+# .clang-format
+# C Style Guide for state_machine project
+
+Language: C
+BasedOnStyle: LLVM
+
+# =============================================================================
+# Indentation
+# =============================================================================
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: true
+
+# =============================================================================
+# Line Width and Wrapping
+# =============================================================================
+ColumnLimit: 100
+ContinuationIndentWidth: 4
+
+# =============================================================================
+# Braces and Blocks
+# =============================================================================
+BreakBeforeBraces: Attach
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# =============================================================================
+# Spaces
+# =============================================================================
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpacesBeforeTrailingComments: 2
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# =============================================================================
+# Pointers and References
+# =============================================================================
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# =============================================================================
+# Comments
+# =============================================================================
+ReflowComments: true
+MaxEmptyLinesToKeep: 1

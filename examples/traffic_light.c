@@ -4,48 +4,44 @@
  * Demonstrates a realistic traffic light FSM with transitions
  */
 
+#include "state_machine/state_machine.h"
 #include <stdio.h>
 #include <unistd.h>
-#include "state_machine/state_machine.h"
 
-typedef enum {
-    STATE_RED = 0,
-    STATE_YELLOW = 1,
-    STATE_GREEN = 2
-} TrafficLightState;
+typedef enum { STATE_RED = 0, STATE_YELLOW = 1, STATE_GREEN = 2 } TrafficLightState;
 
 typedef struct {
     TrafficLightState state;
     int cycle_count;
 } TrafficLightContext;
 
-static void on_enter_red(void *ctx) {
-    TrafficLightContext *c = (TrafficLightContext *)ctx;
+static void on_enter_red(void* ctx) {
+    TrafficLightContext* c = (TrafficLightContext*)ctx;
     printf("[%d] 🔴 RED - Stop! (10 seconds)\n", c->cycle_count);
 }
 
-static void on_exit_red(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_red(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("    Exiting RED state\n");
 }
 
-static void on_enter_green(void *ctx) {
-    TrafficLightContext *c = (TrafficLightContext *)ctx;
+static void on_enter_green(void* ctx) {
+    TrafficLightContext* c = (TrafficLightContext*)ctx;
     printf("[%d] 🟢 GREEN - Go! (8 seconds)\n", c->cycle_count);
 }
 
-static void on_exit_green(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_green(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("    Exiting GREEN state\n");
 }
 
-static void on_enter_yellow(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_enter_yellow(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("    🟡 YELLOW - Prepare to stop (3 seconds)\n");
 }
 
-static void on_exit_yellow(void *ctx) {
-    (void)ctx;  /* unused parameter */
+static void on_exit_yellow(void* ctx) {
+    (void)ctx; /* unused parameter */
     printf("    Exiting YELLOW state\n");
 }
 
